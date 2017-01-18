@@ -8,7 +8,6 @@ This module supports the following configurations:
 * `clientLibPath {string}`: Defaults to `'./clientlibs/'` - this is the path to create client library files in
 * `minSettings {object}`: Over-ride the default settings passed to the uglifyjs.Compressor for JS minification
 * `minSuffix {string}`: Defaults to `'-min'` - this is the suffix added to the minified client library categories
-* `root {string}`: Defaults to `'./'` - this is the root path to find JS and CSS files in
 * `verbose {boolean}`: Defaults to `false` - `true` enables verbose mode for debugging
 
 Please feel free to submit pull requests if you wish to make more items configurable.
@@ -20,7 +19,16 @@ This is the simplest `Gruntfile.js` possible:
 module.exports = function (grunt) {
 	grunt.initConfig({
 		pkg: grunt.file.readJSON('package.json'),
-		clientlibs: {}
+		clientlibs: {
+			files: [
+				{
+					'src': [
+						'./my-css-sources/**/*.css',
+						'./my-js-sources/**/*.js'
+					]
+				}
+			]
+		}
 	});
 
 	grunt.loadNpmTasks('grunt-clientlibs');
@@ -35,6 +43,14 @@ module.exports = function (grunt) {
 	grunt.initConfig({
 		pkg: grunt.file.readJSON('package.json'),
 		clientlibs: {
+			files: [
+				{
+					'src': [
+						'./my-css-sources/**/*.css',
+						'./my-js-sources/**/*.js'
+					]
+				}
+			],
 			options: {
 				clientLibPath: '../src/content/jcr_root/etc/designs/myDesign/clientlibs/',
 				minSettings: {
@@ -42,7 +58,6 @@ module.exports = function (grunt) {
 					// See: http://lisperator.net/uglifyjs/compress
 				},
 				minSuffix: '.min',
-				root: './sources/',
 				verbose: true
 			}
 		}

@@ -1,12 +1,18 @@
 /*global require:true, module:true, options:true */
+// Requires
+var fs = require('fs'),
+	path = require('path'),
+	recursive = require('recursive-readdir'),
+	uglifycss = require('uglifycss'),
+	uglifyjs = require('uglifyjs');
+
 // Declare the module
 module.exports = function (grunt) {
 	'use strict';
 
 	grunt.registerMultiTask('clientlibs', 'Dynamically generate AEM client libraries', function () {
-		var MODULE_NAME = '[clientlibs]',
+		var clientLibs = {},
 			clientLibXML = '<?xml version="1.0" encoding="UTF-8"?>\r\n<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"\r\njcr:primaryType="cq:ClientLibraryFolder"\r\njcr:title="$$NAME$$"\r\ncategories="[$$NAME$$]" />',
-			clientLibs = {},
 			compressorConfig = {
 				sequences: true,
 				properties: false,
@@ -34,47 +40,28 @@ module.exports = function (grunt) {
 				root: './',
 				verbose: false
 			},
-			fs = require('fs'),
-			recursive = require('recursive-readdir'),
-			uglifycss = require('uglifycss'),
-			uglifyjs = require('uglifyjs');
-
-		/**
-		 * @function _log
-		 * @description Determines whether or not it is appropriate to log messages and formats them
-		 * @param {string} msg The message to log
-		 * @param {object} obj An optional object to log
-		 * @returns {void}
-		 */
-		function _log(msg, obj) {
-			if (config.verbose === true) {
-				if (typeof obj !== 'undefined') {
-					console.log(MODULE_NAME + ' ' + msg, obj);
-				} else {
-					console.log(MODULE_NAME + ' ' + msg);
-				}
-			}
-		}
+			options = this.options();
 
 		/**
 		 * @function addFile
 		 * @description Adds a file to the appropriate client library object(s)
 		 * @param {object} file The file to add
-		 * @param {string} fileContent The retrieved file content
 		 * @returns {void}
 		 */
-		function addFile(file, fileContent) {
-			// Fail gracefully
-			_log('Is the file content a valid string?', typeof fileContent === 'string');
-			if (typeof fileContent !== 'string') {
+		function addFile(file) {
+			try {
+				var fileContent = grunt.file.read(file, { encoding: 'utf8' });
+				if (typeof fileContent !== 'string' || fileContent.length === 0) {
+					return;
+				}
+			} catch (e) {
 				return;
 			}
-
 			// Perform pattern matching
 			var clientLib = {
 					'depends': [],
 					'fileContent': fileContent,
-					'fileName': file
+					'fileName': file.replace('./', '')
 				},
 				clientLibPattern = /(\@clientlib )([a-zA-Z0-9\.\-\_]{0,})/g,
 				clientLibMatches = fileContent.match(clientLibPattern),
@@ -84,26 +71,21 @@ module.exports = function (grunt) {
 				dependIsArray = Array.isArray(dependMatches);
 
 			// Populate the object
-			_log('Did we get an array of dependencies?', dependIsArray);
 			if (dependIsArray === true) {
 				dependMatches.forEach(function (matchStr) {
 					var dependName = matchStr.replace('@depends', '').replace('@depend', '').trim();
-					_log('Adding a dependency:', dependName);
 					clientLib.depends.push(dependName);
 				});
 			}
 
 			// Add the object to the appropriate client libraries
-			_log('Did we get an array of client libraries?', clientLibIsArray);
 			if (clientLibIsArray === true) {
 				clientLibMatches.forEach(function (matchStr) {
 					var clientLibName = matchStr.replace('@clientlib', '').trim(),
 						clientLibRef = clientLibs[clientLibName];
 
-					_log('Creating an object for a client library:', clientLibName);
 					if (clientLibName !== '') {
 						if (typeof clientLibRef !== 'object' || clientLibRef === null) {
-							_log('Creating a client library:', clientLibName);
 							clientLibs[clientLibName] = {
 								'css': [],
 								'js': []
@@ -112,10 +94,8 @@ module.exports = function (grunt) {
 						}
 						if (file.indexOf('.css') > -1) {
 							clientLibRef.css.push(clientLib);
-							_log('Added a CSS file.');
 						} else if (file.indexOf('.js') > -1) {
 							clientLibRef.js.push(clientLib);
-							_log('Added a JavaScript file.');
 						}
 					}
 				});
@@ -134,7 +114,6 @@ module.exports = function (grunt) {
 				tree;
 
 			// Attempt to minify the source using `uglifyjs`
-			_log('Is the JS source a valid string?', typeof source === 'string');
 			if (typeof source === 'string') {
 				// Attempt minification
 				try {
@@ -144,12 +123,10 @@ module.exports = function (grunt) {
 					tree = tree.transform(compressor);
 					returnValue = tree.print_to_string();
 				} catch (e) {
-					_log(e);
 				}
 			}
 
 			// Return minified JS if possible
-			_log('Minified JavaScript length:', returnValue.length);
 			return returnValue;
 		}
 
@@ -165,12 +142,15 @@ module.exports = function (grunt) {
 				clientLibName = '',
 				clientLibObj = {},
 				clientLibCSS = '',
+				clientLibCSSObj = {},
 				clientLibJS = '',
+				clientLibJSObj = {},
 				fullClientLibPath = '',
+				fullClientLibXML = '',
 				minClientLibCSS = '',
 				minClientLibJS = '',
-				minClientLibXML = '',
-				j = 0;
+				minClientLibPath = '',
+				minClientLibXML = '';
 
 			for (var i = 0; i < clientLibCount; i = i + 1) {
 				clientLibCSS = '';
@@ -182,14 +162,12 @@ module.exports = function (grunt) {
 				minClientLibXML = clientLibXML.replace(/\$\$NAME\$\$/g, clientLibName + config.minSuffix);
 
 				// Filter invalid names
-				_log('Attempting to create client library:', clientLibName);
 				if (clientLibName === '') {
 					continue;
 				} else {
 					clientLibObj = clientLibs[clientLibName];
 
 					// Do we have a valid client library object
-					_log('Is the client library object valid?', isValidObject(clientLibObj));
 					if (isValidObject(clientLibObj)) {
 						// Set references to child objects
 						clientLibCSSObj = clientLibObj.css;
@@ -204,11 +182,10 @@ module.exports = function (grunt) {
 						}
 
 						// We need XML
-						fs.writeFile(fullClientLibPath + '/.content.xml', fullClientLibXML, function (err) {});
-						fs.writeFile(minClientLibPath + '/.content.xml', minClientLibXML, function (err) {});
+						grunt.file.write(fullClientLibPath + '/.content.xml', fullClientLibXML, { encoding: 'utf8' });
+						grunt.file.write(minClientLibPath + '/.content.xml', minClientLibXML, { encoding: 'utf8' });
 
 						// Create the CSS
-						_log('Do we have CSS?', (Array.isArray(clientLibCSSObj) && clientLibCSSObj.length > 0));
 						if (Array.isArray(clientLibCSSObj) && clientLibCSSObj.length > 0) {
 							// Sort the array into dependency order
 							clientLibCSSObj = performSort(clientLibCSSObj);
@@ -220,87 +197,32 @@ module.exports = function (grunt) {
 							minClientLibCSS = uglifycss.processString(clientLibCSS, {});
 
 							// Write the files
-							fs.writeFile(fullClientLibPath + '/styles.css', clientLibCSS, function (err) {});
-							fs.writeFile(fullClientLibPath + '/css.txt', '#base=.\r\n', function (err) {});
-							fs.appendFile(fullClientLibPath + '/css.txt', 'styles.css', function (err) {});
-							fs.writeFile(minClientLibPath + '/styles.css', minClientLibCSS, function (err) {});
-							fs.writeFile(minClientLibPath + '/css.txt', '#base=.\r\n', function (err) {});
-							fs.appendFile(minClientLibPath + '/css.txt', 'styles.css', function (err) {});
+							grunt.file.write(fullClientLibPath + '/styles.css', clientLibCSS, { encoding: 'utf8' });
+							grunt.file.write(fullClientLibPath + '/css.txt', '#base=.\r\nstyles.css', { encoding: 'utf8' });
+							grunt.file.write(minClientLibPath + '/styles.css', minClientLibCSS, { encoding: 'utf8' });
+							grunt.file.write(minClientLibPath + '/css.txt', '#base=.\r\nstyles.css', { encoding: 'utf8' });
 						}
 
 						// Create the JS
-						_log('Do we have JavaScript?', (Array.isArray(clientLibJSObj) && clientLibJSObj.length > 0));
 						if (Array.isArray(clientLibJSObj) && clientLibJSObj.length > 0) {
 							// Sort the array into dependency order
 							clientLibJSObj = performSort(clientLibJSObj);
 
 							// Generate and minify the string
 							for (var j = 0; j < clientLibJSObj.length; j = j + 1) {
-								clientLibJS += clientLibJSObj[i].fileContent + '\r\n';
+								clientLibJS += clientLibJSObj[j].fileContent + '\r\n';
 							}
 							minClientLibJS = compressJS(clientLibJS);
 
 							// Write the files
-							fs.writeFile(fullClientLibPath + '/classes.js', clientLibJS, function (err) {});
-							fs.writeFile(fullClientLibPath + '/js.txt', '#base=.\r\n', function (err) {});
-							fs.appendFile(fullClientLibPath + '/js.txt', 'classes.js', function (err) {});
-							fs.writeFile(minClientLibPath + '/classes.js', minClientLibJS, function (err) {});
-							fs.writeFile(minClientLibPath + '/js.txt', '#base=.\r\n', function (err) {});
-							fs.appendFile(minClientLibPath + '/js.txt', 'classes.js', function (err) {});
+							grunt.file.write(fullClientLibPath + '/classes.js', clientLibJS, { encoding: 'utf8' });
+							grunt.file.write(fullClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
+							grunt.file.write(minClientLibPath + '/classes.js', minClientLibJS, { encoding: 'utf8' });
+							grunt.file.write(minClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
 						}
 					}
 				}
 			}
-		}
-
-		/**
-		 * @function findFiles
-		 * @description Finds valid files to be add to client libraries
-		 * @returns {void}
-		 */
-		function findFiles() {
-			recursive(config.root, [ignoreFn], function (err, files) {
-				if (err) {
-					return;
-				}
-				files.forEach(function (file, index, arr) {
-					fs.readFile(config.root + file, 'UTF-8', function (err, data) {
-						if (err) {
-							return;
-						}
-						addFile(file, data);
-						if (index + 1 === arr.length) {
-							createClientLibs();
-						}
-					});
-				});
-			});
-		}
-
-		/**
-		 * @function ignoreFn
-		 * @description A helper function to filter files from the results of recursive-readdir
-		 * @param {object} file A file located by recursive-readdir
-		 * @param {object} stats The information about that file
-		 * @returns {boolean} Should the file be rejected?
-		 */
-		function ignoreFn(file, stats) {
-			var returnValue = false;
-
-			// Filter out node modules
-			// Filter out non-JS and non-JS files
-			if (file.indexOf('node_module') > -1 || file.indexOf(config.clientLibPath.replace('./', '')) > -1) {
-				returnValue = true;
-			} else if (stats.isDirectory() === false && file.indexOf('.css') === -1 && file.indexOf('.js') === -1) {
-				returnValue = true;
-			}
-
-			// Filter out JSON files
-			if (file.indexOf('.json') > -1) {
-				returnValue = true;
-			}
-
-			return returnValue;
 		}
 
 		/**
@@ -341,8 +263,6 @@ module.exports = function (grunt) {
 		function sortFn(fileA, fileB) {
 			var returnValue = 1;
 
-			_log('fileA.fileName:', fileA.fileName);
-			_log('fileB.fileName:', fileB.fileName);
 			if (fileB.depends.indexOf(fileA.fileName) > -1) {
 				returnValue = -1;
 			}
@@ -365,7 +285,6 @@ module.exports = function (grunt) {
 				targetVal = null,
 				i = 0;
 
-			_log('propCount:', propCount);
 			for (i = 0; i < propCount; i = i + 1) {
 				propName = props[i];
 				sourceVal = source[propName];
@@ -377,13 +296,15 @@ module.exports = function (grunt) {
 			}
 		}
 
-		// Prepare the configurations
-		transferConfigs(options, config);
-		if (isValidObject(options.minSettings)) {
-			transferConfigs(options.minSettings, compressorConfig);
+		// Configure this task
+		if (isValidObject(options)) {
+			transferConfigs(options, config);
+			if (isValidObject(options.minSettings)) {
+				transferConfigs(options.minSettings, compressorConfig);
+			}
 		}
 
-		// Delete all client library files
+		// Clean files
 		recursive(config.clientLibPath, function (err, files) {
 			if (err) {
 				return;
@@ -394,13 +315,19 @@ module.exports = function (grunt) {
 						fs.unlinkSync(config.clientLibPath + file);
 					} catch (e) {
 					}
-					if (index + 1 === arr.length) {
-						findFiles();
-					}
 				});
-			} else {
-				findFiles();
 			}
 		});
+
+		// Find the appropriate files
+		this.files.forEach(function (file) {
+			file.src.forEach(function (sourcePath, index, arr) {
+				grunt.log.writeln(sourcePath);
+				addFile(sourcePath);
+			});
+		});
+
+		// Create the client libraries
+		createClientLibs();
 	});
 };
