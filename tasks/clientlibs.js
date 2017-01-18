@@ -163,24 +163,19 @@ module.exports = function (grunt) {
 				clientLibCount = clientLibNames.length,
 				clientLibPath = config.clientLibPath,
 				clientLibName = '',
+				clientLibObj = {},
 				clientLibCSS = '',
-				clientLibCSSObj = {},
 				clientLibJS = '',
-				clientLibJSObj = {},
 				fullClientLibPath = '',
-				fullClientLibXML = '',
 				minClientLibCSS = '',
 				minClientLibJS = '',
-				minClientLibPath = '',
 				minClientLibXML = '',
-				i = 0;
+				j = 0;
 
-			// Attempt to create client libraries one by one
-			_log('Creating ' + clientLibCount + ' client libraries.');
-			clientLibs.forEach(function (clientLib, index, array) {
+			for (var i = 0; i < clientLibCount; i = i + 1) {
 				clientLibCSS = '';
 				clientLibJS = '';
-				clientLibName = (clientLibNames[index] + '').trim();
+				clientLibName = (clientLibNames[i] + '').trim();
 				fullClientLibPath = clientLibPath + clientLibName;
 				fullClientLibXML = clientLibXML.replace(/\$\$NAME\$\$/g, clientLibName);
 				minClientLibPath = fullClientLibPath + config.minSuffix;
@@ -188,15 +183,17 @@ module.exports = function (grunt) {
 
 				// Filter invalid names
 				_log('Attempting to create client library:', clientLibName);
-				if (clientLibName !== '') {
-					clientLib = clientLibs[clientLibName];
+				if (clientLibName === '') {
+					continue;
+				} else {
+					clientLibObj = clientLibs[clientLibName];
 
 					// Do we have a valid client library object
-					_log('Is the client library object valid?', isValidObject(clientLib));
-					if (isValidObject(clientLib)) {
+					_log('Is the client library object valid?', isValidObject(clientLibObj));
+					if (isValidObject(clientLibObj)) {
 						// Set references to child objects
-						clientLibCSSObj = clientLib.css;
-						clientLibJSObj = clientLib.js;
+						clientLibCSSObj = clientLibObj.css;
+						clientLibJSObj = clientLibObj.js;
 
 						// Ensure we have directories to save to
 						if (!fs.existsSync(fullClientLibPath)) {
@@ -217,8 +214,8 @@ module.exports = function (grunt) {
 							clientLibCSSObj = performSort(clientLibCSSObj);
 
 							// Generate and minify the string
-							for (i = 0; i < clientLib.css.length; i = i + 1) {
-								clientLibCSS += clientLibCSSObj[i].fileContent + '\r\n';
+							for (var j = 0; j < clientLibCSSObj.length; j = j + 1) {
+								clientLibCSS += clientLibCSSObj[j].fileContent + '\r\n';
 							}
 							minClientLibCSS = uglifycss.processString(clientLibCSS, {});
 
@@ -238,7 +235,7 @@ module.exports = function (grunt) {
 							clientLibJSObj = performSort(clientLibJSObj);
 
 							// Generate and minify the string
-							for (i = 0; i < clientLib.js.length; i = i + 1) {
+							for (var j = 0; j < clientLibJSObj.length; j = j + 1) {
 								clientLibJS += clientLibJSObj[i].fileContent + '\r\n';
 							}
 							minClientLibJS = compressJS(clientLibJS);
@@ -253,7 +250,7 @@ module.exports = function (grunt) {
 						}
 					}
 				}
-			});
+			}
 		}
 
 		/**
