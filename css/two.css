@@ -1,0 +1,5 @@
+/**
+ * @clientlib test
+ * @depends one.css
+ */
+.two {background-color: #990000;}

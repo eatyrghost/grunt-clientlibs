@@ -3,7 +3,54 @@ Reads `JSDoc`/`SASSDoc`-style `@depend` and `@clientlib` notations to generate A
 
 ## Quick start: configuration options
 
+This module supports the following configurations:
 
+* `clientLibPath {string}`: Defaults to `'./clientlibs/'` - this is the path to create client library files in
+* `minSettings {object}`: Over-ride the default settings passed to the uglifyjs.Compressor for JS minification
+* `minSuffix {string}`: Defaults to `'-min'` - this is the suffix added to the minified client library categories
+* `root {string}`: Defaults to `'./'` - this is the root path to find JS and CSS files in
+* `verbose {boolean}`: Defaults to `false` - `true` enables verbose mode for debugging
+
+Please feel free to submit pull requests if you wish to make more items configurable.
+
+This is the simplest `Gruntfile.js` possible:
+
+```
+/*global module:true */
+module.exports = function (grunt) {
+	grunt.initConfig({
+		pkg: grunt.file.readJSON('package.json'),
+		clientlibs: {}
+	});
+
+	grunt.loadNpmTasks('grunt-clientlibs');
+};
+```
+
+This is how you would change all options:
+
+```
+/*global module:true */
+module.exports = function (grunt) {
+	grunt.initConfig({
+		pkg: grunt.file.readJSON('package.json'),
+		clientlibs: {
+			options: {
+				clientLibPath: '../src/content/jcr_root/etc/designs/myDesign/clientlibs/',
+				minSettings: {
+					// Accepts all the same properties as the uglifyjs.Compressor
+					// See: http://lisperator.net/uglifyjs/compress
+				},
+				minSuffix: '.min',
+				root: './sources/',
+				verbose: true
+			}
+		}
+	});
+
+	grunt.loadNpmTasks('grunt-clientlibs');
+};
+```
 
 ## General overview: what does it do?
 
@@ -14,6 +61,23 @@ This module is intended to allow teams to create front end projects that reflect
 This also allows teams to share their code between multiple projects - have different Grunt tasks that package your code for AEM, a private Bower repository, and other destinations, share commonly-used code cleanly, and more.
 
 Your sources dictate how to structure the code for AEM, AEM does not dictate how you structure your sources. Tag files to add them to specific client libraries at build time - generating both a normal, expanded version of your sources for debugging, and a preminified version for production.
+
+Client libraries created look like this:
+
+```
+/<client library name>
+	/.content.xml
+	/classes.js
+	/css.txt
+	/js.txt
+	/styles.css
+/<client library name><minSuffix>
+	/.content.xml
+	/classes.js
+	/css.txt
+	/js.txt
+	/styles.css
+```
 
 ## Preparing your sources for dynamic compilation
 
