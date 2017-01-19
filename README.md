@@ -6,7 +6,10 @@ Reads `JSDoc`/`SASSDoc`-style `@depend` and `@clientlib` notations to generate A
 This module supports the following configurations:
 
 * `clientLibPath {string}`: Defaults to `'./clientlibs/'` - this is the path to create client library files in
-* `minSettings {object}`: Over-ride the default settings passed to the uglifyjs.Compressor for JS minification
+* `cssDependPrefix {string}`: Defaults to `''` - a prefix to use for `@depends` paths to keep CSS sources clean
+* `jsDependPrefix {string}`: Defaults to `''` - a prefix to use for `@depends` paths to keep JS sources clean
+* `minSettings {object}`: Over-ride the default settings passed to the `uglifyjs.Compressor` for JS minification
+* `fullSuffix {string}`: Defaults to `''` - this is the suffix added to the unminified client library categories
 * `minSuffix {string}`: Defaults to `'-min'` - this is the suffix added to the minified client library categories
 * `verbose {boolean}`: Defaults to `false` - `true` enables verbose mode for debugging
 
@@ -20,14 +23,16 @@ module.exports = function (grunt) {
 	grunt.initConfig({
 		pkg: grunt.file.readJSON('package.json'),
 		clientlibs: {
-			files: [
-				{
-					'src': [
-						'./my-css-sources/**/*.css',
-						'./my-js-sources/**/*.js'
-					]
-				}
-			]
+			<task name>: {
+				files: [
+					{
+						'src': [
+							'./my-css-sources/**/*.css',
+							'./my-js-sources/**/*.js'
+						]
+					}
+				]
+			}
 		}
 	});
 
@@ -142,7 +147,7 @@ A typical `JSDoc` block might look like this:
 This module only cares about `@clientlib` and `@depend`.
 
 * `@clientlib`: This is the category name for the client library you wish to add this file to. You can add a file to multiple client libraries, but this could lead to duplicate code on your web pages.
-* `@depend` or `@depends`: This is the full path to a file on which this class file depends. For example, if your class uses a library or extends another class file, you would list those files as individual `@depend` items.
+* `@depend` or `@depends`: This is the full path (from project root) to a file on which this class file depends. For example, if your class uses a library or extends another class file, you would list those files as individual `@depend` items. If you have specified a `jsDependPrefix` in your config, you can simplify these paths.
 
 Within a SASS file that will explicitly output to a compressed CSS file, add the following block at the start of the file:
 
@@ -154,7 +159,7 @@ Within a SASS file that will explicitly output to a compressed CSS file, add the
 */
 ```
 
-Note that the `@depend` statements refer to the generated CSS files, not the source SASS files.
+Note that the `@depend` statements refer to the generated CSS files, not the source SASS files. If you have specified a `cssDependPrefix` in your config, you can simplify these paths.
 
 ## Using your new client libraries
 

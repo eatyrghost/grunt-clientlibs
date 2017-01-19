@@ -36,6 +36,9 @@ module.exports = function (grunt) {
 			},
 			config = {
 				clientLibPath: './clientlibs/',
+				cssDependPrefix: '',
+				fullSuffix: '',
+				jsDependPrefix: '',
 				minSuffix: '-min',
 				root: './',
 				verbose: false
@@ -156,9 +159,9 @@ module.exports = function (grunt) {
 				clientLibCSS = '';
 				clientLibJS = '';
 				clientLibName = (clientLibNames[i] + '').trim();
-				fullClientLibPath = clientLibPath + clientLibName;
-				fullClientLibXML = clientLibXML.replace(/\$\$NAME\$\$/g, clientLibName);
-				minClientLibPath = fullClientLibPath + config.minSuffix;
+				fullClientLibPath = clientLibPath + clientLibName + config.fullSuffix;
+				fullClientLibXML = clientLibXML.replace(/\$\$NAME\$\$/g, clientLibName + config.fullSuffix);
+				minClientLibPath = clientLibPath + clientLibName + config.minSuffix;
 				minClientLibXML = clientLibXML.replace(/\$\$NAME\$\$/g, clientLibName + config.minSuffix);
 
 				// Filter invalid names
@@ -180,6 +183,8 @@ module.exports = function (grunt) {
 						if (!fs.existsSync(minClientLibPath)) {
 							fs.mkdirSync(minClientLibPath);
 						}
+
+						// We need a manifest
 
 						// We need XML
 						grunt.file.write(fullClientLibPath + '/.content.xml', fullClientLibXML, { encoding: 'utf8' });
@@ -215,6 +220,7 @@ module.exports = function (grunt) {
 							minClientLibJS = compressJS(clientLibJS);
 
 							// Write the files
+							// @TODO Add a flag for preminified in production clientlibs
 							grunt.file.write(fullClientLibPath + '/classes.js', clientLibJS, { encoding: 'utf8' });
 							grunt.file.write(fullClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
 							grunt.file.write(minClientLibPath + '/classes.js', minClientLibJS, { encoding: 'utf8' });
@@ -261,9 +267,10 @@ module.exports = function (grunt) {
 		 * @returns {number} A numerical representation of fileA's position relative to fileB
 		 */
 		function sortFn(fileA, fileB) {
-			var returnValue = 1;
+			var returnValue = 1,
+				cleanFilePath = fileA.fileName.replace('./', '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, '');
 
-			if (fileB.depends.indexOf(fileA.fileName) > -1) {
+			if (fileB.depends.indexOf(cleanFilePath) > -1) {
 				returnValue = -1;
 			}
 
