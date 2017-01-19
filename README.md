@@ -31,39 +31,10 @@ module.exports = function (grunt) {
 							'./my-js-sources/**/*.js'
 						]
 					}
-				]
-			}
-		}
-	});
-
-	grunt.loadNpmTasks('grunt-clientlibs');
-};
-```
-
-This is how you would change all options:
-
-```
-/*global module:true */
-module.exports = function (grunt) {
-	grunt.initConfig({
-		pkg: grunt.file.readJSON('package.json'),
-		clientlibs: {
-			files: [
-				{
-					'src': [
-						'./my-css-sources/**/*.css',
-						'./my-js-sources/**/*.js'
-					]
+				],
+				options: {
+					// Add option configurations here
 				}
-			],
-			options: {
-				clientLibPath: '../src/content/jcr_root/etc/designs/myDesign/clientlibs/',
-				minSettings: {
-					// Accepts all the same properties as the uglifyjs.Compressor
-					// See: http://lisperator.net/uglifyjs/compress
-				},
-				minSuffix: '.min',
-				verbose: true
 			}
 		}
 	});
