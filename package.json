@@ -1,6 +1,6 @@
 {
   "name": "grunt-clientlibs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Generates client libraries automatically from JSDoc/SASSDoc notations in files.",
   "main": "index.js",
   "scripts": {
