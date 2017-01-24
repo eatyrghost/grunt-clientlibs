@@ -71,13 +71,16 @@ module.exports = function (grunt) {
 				clientLibIsArray = Array.isArray(clientLibMatches),
 				dependPattern = /(\@depend(s|) )([a-zA-Z0-9\/\.\-\_]{0,})/g,
 				dependMatches = fileContent.match(dependPattern),
-				dependIsArray = Array.isArray(dependMatches);
+				dependIsArray = Array.isArray(dependMatches),
+				mentions = [],
+				newMentions = [];
 
 			// Populate the object
 			if (dependIsArray === true) {
 				dependMatches.forEach(function (matchStr) {
 					var dependName = matchStr.replace('@depends', '').replace('@depend', '').trim();
 					clientLib.depends.push(dependName);
+					mentions.push(dependName);
 				});
 			}
 
@@ -88,13 +91,23 @@ module.exports = function (grunt) {
 						clientLibRef = clientLibs[clientLibName];
 
 					if (clientLibName !== '') {
+						// Create the client library object if it doesn't exist
 						if (typeof clientLibRef !== 'object' || clientLibRef === null) {
 							clientLibs[clientLibName] = {
 								'css': [],
-								'js': []
+								'js': [],
+								'mentions': []
 							};
 							clientLibRef = clientLibs[clientLibName];
 						}
+
+						// Populate and filter the mentions
+						newMentions = clientLibRef.mentions.concat(mentions);
+						newMentions = newMentions.filter(function (item, index, array) {
+							return array.indexOf(item) === index;
+						});
+						clientLibRef.mentions = newMentions;
+
 						if (file.indexOf('.css') > -1) {
 							clientLibRef.css.push(clientLib);
 						} else if (file.indexOf('.js') > -1) {
@@ -148,8 +161,10 @@ module.exports = function (grunt) {
 				clientLibCSSObj = {},
 				clientLibJS = '',
 				clientLibJSObj = {},
+				dependsContent = '',
 				fullClientLibPath = '',
 				fullClientLibXML = '',
+				mentionIndex = -1,
 				minClientLibCSS = '',
 				minClientLibJS = '',
 				minClientLibPath = '',
@@ -184,8 +199,6 @@ module.exports = function (grunt) {
 							fs.mkdirSync(minClientLibPath);
 						}
 
-						// We need a manifest
-
 						// We need XML
 						grunt.file.write(fullClientLibPath + '/.content.xml', fullClientLibXML, { encoding: 'utf8' });
 						grunt.file.write(minClientLibPath + '/.content.xml', minClientLibXML, { encoding: 'utf8' });
@@ -198,6 +211,15 @@ module.exports = function (grunt) {
 							// Generate and minify the string
 							for (var j = 0; j < clientLibCSSObj.length; j = j + 1) {
 								clientLibCSS += clientLibCSSObj[j].fileContent + '\r\n';
+
+								// Remove mentions for found CSS files
+								mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSObj[j].fileName);
+								if (mentionIndex === -1 && config.cssDependPrefix !== '') {
+									mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSObj[j].fileName.replace(config.cssDependPrefix, ''));
+								}
+								if (mentionIndex > -1) {
+									clientLibObj.mentions.splice(mentionIndex, 1);
+								}
 							}
 							minClientLibCSS = uglifycss.processString(clientLibCSS, {});
 
@@ -216,6 +238,15 @@ module.exports = function (grunt) {
 							// Generate and minify the string
 							for (var j = 0; j < clientLibJSObj.length; j = j + 1) {
 								clientLibJS += clientLibJSObj[j].fileContent + '\r\n';
+
+								// Remove mentions for found CSS files
+								mentionIndex = clientLibObj.mentions.indexOf(clientLibJSObj[j].fileName);
+								if (mentionIndex === -1 && config.jsDependPrefix !== '') {
+									mentionIndex = clientLibObj.mentions.indexOf(clientLibJSObj[j].fileName.replace(config.jsDependPrefix, ''));
+								}
+								if (mentionIndex > -1) {
+									clientLibObj.mentions.splice(mentionIndex, 1);
+								}
 							}
 							minClientLibJS = compressJS(clientLibJS);
 
@@ -225,6 +256,13 @@ module.exports = function (grunt) {
 							grunt.file.write(fullClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
 							grunt.file.write(minClientLibPath + '/classes.js', minClientLibJS, { encoding: 'utf8' });
 							grunt.file.write(minClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
+						}
+
+						// Write out the list of dependencies that were mentioned but not included
+						if (clientLibObj.mentions.length > 0) {
+							dependsContent = clientLibObj.mentions.join('\r\n');
+							grunt.file.write(fullClientLibPath + '/depends.txt', dependsContent, { encoding: 'utf8' });
+							grunt.file.write(minClientLibPath + '/depends.txt', dependsContent, { encoding: 'utf8' });
 						}
 					}
 				}
