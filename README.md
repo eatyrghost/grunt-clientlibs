@@ -7,6 +7,7 @@ This module supports the following configurations:
 
 * `clientLibPath {string}`: Defaults to `'./clientlibs/'` - this is the path to create client library files in
 * `cssDependPrefix {string}`: Defaults to `''` - a prefix to use for `@depends` paths to keep CSS sources clean
+* `includes {object}`: A collection of non-editable sources to inject into your generated client libraries, see **Includes** section
 * `jsDependPrefix {string}`: Defaults to `''` - a prefix to use for `@depends` paths to keep JS sources clean
 * `minSettings {object}`: Over-ride the default settings passed to the `uglifyjs.Compressor` for JS minification
 * `fullSuffix {string}`: Defaults to `''` - this is the suffix added to the unminified client library categories
@@ -172,4 +173,26 @@ if (!settings.getRunModes().contains("publish") || expandClientLibs.equals("true
 }
 %>
 ```
+## Includes
+Quite often, you will need to include third party sources in your client libraries, but manipulating their sources directly to add notations will not be appropriate - for example, if you pull them into your codebase using a package manager and their sources change with each version update. The `includes` option is designed to allow you to pull these into your client libraries easily. The configuration object looks like this:
 
+```
+includes: {
+	'client-library-name': {
+		js: [
+			'path-to-a-third-party-js-file.js',
+			'path-to-a-third-party-js-file.js',
+			'path-to-a-third-party-js-file.js'
+		],
+		css: [
+			'path-to-a-third-party-css-file.css',
+			'path-to-a-third-party-css-file.css',
+			'path-to-a-third-party-css-file.css'
+		]
+	}
+}
+```
+
+For each client library you need to add files to, create a child object on the `includes` object with a `js` array, a `css` array, or both.
+
+You must order these includes in the order you expect them - they do not get the benefit of the dependency ordering logic as they cannot be notated. You will also need to be aware that these are included _before_ your sources and thus should not be dependent on them.
