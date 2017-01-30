@@ -305,11 +305,14 @@ module.exports = function (grunt) {
 		 * @returns {number} A numerical representation of fileA's position relative to fileB
 		 */
 		function sortFn(fileA, fileB) {
-			var returnValue = 1,
-				cleanFilePath = fileA.fileName.replace('./', '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, '');
+			var returnValue = 0,
+				cleanFileA = fileA.fileName.replace('./', '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, ''),
+				cleanFileB = fileB.fileName.replace('./', '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, '');
 
-			if (fileB.depends.indexOf(cleanFilePath) > -1) {
+			if (fileB.depends.indexOf(cleanFileA) > -1) {
 				returnValue = -1;
+			} else if (fileA.depends.indexOf(cleanFileB) > -1) {
+				returnValue = 1;
 			}
 
 			return returnValue;
