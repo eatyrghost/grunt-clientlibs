@@ -38,6 +38,7 @@ module.exports = function (grunt) {
 				clientLibPath: './clientlibs/',
 				cssDependPrefix: '',
 				fullSuffix: '',
+				includes: {},
 				jsDependPrefix: '',
 				minSuffix: '-min',
 				root: './',
@@ -63,7 +64,6 @@ module.exports = function (grunt) {
 			// Perform pattern matching
 			var clientLib = {
 					'depends': [],
-					'fileContent': fileContent,
 					'fileName': file.replace('./', '')
 				},
 				clientLibPattern = /(\@clientlib )([a-zA-Z0-9\.\-\_]{0,})/g,
@@ -205,12 +205,15 @@ module.exports = function (grunt) {
 
 						// Create the CSS
 						if (Array.isArray(clientLibCSSObj) && clientLibCSSObj.length > 0) {
+							// Retrieve any includes
+							clientLibCSS = getIncludesString(clientLibName, 'css');
+
 							// Sort the array into dependency order
 							clientLibCSSObj = performSort(clientLibCSSObj);
 
 							// Generate and minify the string
 							for (var j = 0; j < clientLibCSSObj.length; j = j + 1) {
-								clientLibCSS += clientLibCSSObj[j].fileContent + '\r\n';
+								clientLibCSS += grunt.file.read(clientLibCSSObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
 
 								// Remove mentions for found CSS files
 								mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSObj[j].fileName);
@@ -232,12 +235,15 @@ module.exports = function (grunt) {
 
 						// Create the JS
 						if (Array.isArray(clientLibJSObj) && clientLibJSObj.length > 0) {
+							// Retrieve any includes
+							clientLibJS = getIncludesString(clientLibName, 'js');
+
 							// Sort the array into dependency order
 							clientLibJSObj = performSort(clientLibJSObj);
 
 							// Generate and minify the string
 							for (var j = 0; j < clientLibJSObj.length; j = j + 1) {
-								clientLibJS += clientLibJSObj[j].fileContent + '\r\n';
+								clientLibJS += grunt.file.read(clientLibJSObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
 
 								// Remove mentions for found CSS files
 								mentionIndex = clientLibObj.mentions.indexOf(clientLibJSObj[j].fileName);
@@ -267,6 +273,46 @@ module.exports = function (grunt) {
 					}
 				}
 			}
+		}
+
+		/**
+		 * @function getIncludesString
+		 * @description Reads any includes of the given type for the client library
+		 * @param {string} clientLibName The name of the client library
+		 * @param {string} includeType The type of includes to retrieve
+		 * @returns {string}
+		 */
+		function getIncludesString(clientLibName, includeType) {
+			if (validString(clientLibName) === '' || validString(includeType) === '') {
+				return '';
+			}
+
+			var includeObj = config.includes[clientLibName],
+				includeTypeObj = null,
+				includeFile = '',
+				includeFileContent = '',
+				returnValue = '';
+
+			if (isValidObject(includeObj) === false) {
+				return '';
+			} else {
+				includeTypeObj = includeObj[includeType];
+
+				if (isValidObject(includeTypeObj) === false || Array.isArray(includeTypeObj) === false) {
+					return '';
+				}
+			}
+
+			for (var i = 0; i < includeTypeObj.length; i = i + 1) {
+				includeFile = includeTypeObj[i];
+				includeFileContent = grunt.file.read(includeFile, { encoding: 'utf8' });
+
+				if (validString(includeFileContent) !== '') {
+					returnValue += includeFileContent;
+				}
+			}
+
+			return returnValue;
 		}
 
 		/**
@@ -344,6 +390,25 @@ module.exports = function (grunt) {
 			}
 		}
 
+		/**
+		 * @function validString
+		 * @description Ensures we have a valid string
+		 * @param {object} str The object to validate
+		 * @param {string} retVal The default return value
+		 * @returns {string}
+		 */
+		function validString(str, retVal) {
+			if (typeof str === 'string') {
+				return str;
+			} else if (typeof str.toString === 'function') {
+				return str.toString();
+			} else if (typeof retVal === 'string') {
+				return retVal;
+			} else {
+				return '';
+			}
+		}
+
 		// Configure this task
 		if (isValidObject(options)) {
 			transferConfigs(options, config);
@@ -370,7 +435,6 @@ module.exports = function (grunt) {
 		// Find the appropriate files
 		this.files.forEach(function (file) {
 			file.src.forEach(function (sourcePath, index, arr) {
-				grunt.log.writeln(sourcePath);
 				addFile(sourcePath);
 			});
 		});
