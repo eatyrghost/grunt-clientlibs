@@ -190,7 +190,7 @@ module.exports = function (grunt) {
 					clientLibObj = clientLibs[clientLibName];
 
 					// Do we have a valid client library object
-					if (spook.isValidObject(clientLibObj)) {
+					if (spook.isValidObject(clientLibObj) === true) {
 						// Set references to child objects
 						clientLibCSSObj = clientLibObj.css;
 						clientLibJSObj = clientLibObj.js;
@@ -385,9 +385,9 @@ module.exports = function (grunt) {
 		}
 
 		// Configure this task
-		if (spook.isValidObject(options)) {
+		if (spook.isValidObject(options) === true) {
 			transferConfigs(options, config);
-			if (spook.isValidObject(options.minSettings)) {
+			if (spook.isValidObject(options.minSettings) === true) {
 				transferConfigs(options.minSettings, compressorConfig);
 			}
 		}
