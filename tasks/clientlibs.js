@@ -101,7 +101,8 @@ module.exports = function (grunt) {
 								'mentions': []
 							};
 							clientLibRef = clientLibs[clientLibName];
-						} else if (clientLibRef.contains.indexOf(file) === -1) {
+						}
+						if (clientLibRef.contains.indexOf(file) === -1) {
 							clientLibRef.contains.push(file);
 
 							if (file.indexOf('.css') > -1) {
