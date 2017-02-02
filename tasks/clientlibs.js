@@ -3,6 +3,7 @@
 var fs = require('fs'),
 	path = require('path'),
 	recursive = require('recursive-readdir'),
+	spook = require('spook-utils'),
 	uglifycss = require('uglifycss'),
 	uglifyjs = require('uglifyjs');
 
@@ -55,7 +56,7 @@ module.exports = function (grunt) {
 		function addFile(file) {
 			try {
 				var fileContent = grunt.file.read(file, { encoding: 'utf8' });
-				if (typeof fileContent !== 'string' || fileContent.length === 0) {
+				if (spook.validString(fileContent) === '') {
 					return;
 				}
 			} catch (e) {
@@ -92,13 +93,22 @@ module.exports = function (grunt) {
 
 					if (clientLibName !== '') {
 						// Create the client library object if it doesn't exist
-						if (typeof clientLibRef !== 'object' || clientLibRef === null) {
+						if (spook.validObject(clientLibRef) === null) {
 							clientLibs[clientLibName] = {
+								'contains': [],
 								'css': [],
 								'js': [],
 								'mentions': []
 							};
 							clientLibRef = clientLibs[clientLibName];
+						} else if (clientLibRef.contains.indexOf(file) === -1) {
+							clientLibRef.contains.push(file);
+
+							if (file.indexOf('.css') > -1) {
+								clientLibRef.css.push(clientLib);
+							} else if (file.indexOf('.js') > -1) {
+								clientLibRef.js.push(clientLib);
+							}
 						}
 
 						// Populate and filter the mentions
@@ -107,12 +117,6 @@ module.exports = function (grunt) {
 							return array.indexOf(item) === index;
 						});
 						clientLibRef.mentions = newMentions;
-
-						if (file.indexOf('.css') > -1) {
-							clientLibRef.css.push(clientLib);
-						} else if (file.indexOf('.js') > -1) {
-							clientLibRef.js.push(clientLib);
-						}
 					}
 				});
 			}
@@ -130,7 +134,7 @@ module.exports = function (grunt) {
 				tree;
 
 			// Attempt to minify the source using `uglifyjs`
-			if (typeof source === 'string') {
+			if (spook.validString(source) !== '') {
 				// Attempt minification
 				try {
 					tree = uglifyjs.parse(source);
@@ -186,7 +190,7 @@ module.exports = function (grunt) {
 					clientLibObj = clientLibs[clientLibName];
 
 					// Do we have a valid client library object
-					if (isValidObject(clientLibObj)) {
+					if (spook.isValidObject(clientLibObj) === true) {
 						// Set references to child objects
 						clientLibCSSObj = clientLibObj.css;
 						clientLibJSObj = clientLibObj.js;
@@ -283,7 +287,7 @@ module.exports = function (grunt) {
 		 * @returns {string}
 		 */
 		function getIncludesString(clientLibName, includeType) {
-			if (validString(clientLibName) === '' || validString(includeType) === '') {
+			if (spook.validString(clientLibName) === '' || spook.validString(includeType) === '') {
 				return '';
 			}
 
@@ -293,12 +297,12 @@ module.exports = function (grunt) {
 				includeFileContent = '',
 				returnValue = '';
 
-			if (isValidObject(includeObj) === false) {
+			if (spook.isValidObject(includeObj) === false) {
 				return '';
 			} else {
 				includeTypeObj = includeObj[includeType];
 
-				if (isValidObject(includeTypeObj) === false || Array.isArray(includeTypeObj) === false) {
+				if (spook.isValidObject(includeTypeObj) === false || Array.isArray(includeTypeObj) === false) {
 					return '';
 				}
 			}
@@ -307,22 +311,12 @@ module.exports = function (grunt) {
 				includeFile = includeTypeObj[i];
 				includeFileContent = grunt.file.read(includeFile, { encoding: 'utf8' });
 
-				if (validString(includeFileContent) !== '') {
+				if (spook.validString(includeFileContent) !== '') {
 					returnValue += includeFileContent;
 				}
 			}
 
 			return returnValue;
-		}
-
-		/**
-		 * @function isValidObject
-		 * @description Ensures a variable is a valid object
-		 * @param {object} obj The object to verify
-		 * @returns {boolean}
-		 */
-		function isValidObject(obj) {
-			return (typeof obj === 'object' && obj !== null);
 		}
 
 		/**
@@ -390,29 +384,10 @@ module.exports = function (grunt) {
 			}
 		}
 
-		/**
-		 * @function validString
-		 * @description Ensures we have a valid string
-		 * @param {object} str The object to validate
-		 * @param {string} retVal The default return value
-		 * @returns {string}
-		 */
-		function validString(str, retVal) {
-			if (typeof str === 'string') {
-				return str;
-			} else if (typeof str.toString === 'function') {
-				return str.toString();
-			} else if (typeof retVal === 'string') {
-				return retVal;
-			} else {
-				return '';
-			}
-		}
-
 		// Configure this task
-		if (isValidObject(options)) {
+		if (spook.isValidObject(options) === true) {
 			transferConfigs(options, config);
-			if (isValidObject(options.minSettings)) {
+			if (spook.isValidObject(options.minSettings) === true) {
 				transferConfigs(options.minSettings, compressorConfig);
 			}
 		}
