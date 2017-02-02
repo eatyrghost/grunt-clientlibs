@@ -94,11 +94,20 @@ module.exports = function (grunt) {
 						// Create the client library object if it doesn't exist
 						if (typeof clientLibRef !== 'object' || clientLibRef === null) {
 							clientLibs[clientLibName] = {
+								'contains': [],
 								'css': [],
 								'js': [],
 								'mentions': []
 							};
 							clientLibRef = clientLibs[clientLibName];
+						} else if (clientLibRef.contains.indexOf(file) === -1) {
+							clientLibRef.contains.push(file);
+
+							if (file.indexOf('.css') > -1) {
+								clientLibRef.css.push(clientLib);
+							} else if (file.indexOf('.js') > -1) {
+								clientLibRef.js.push(clientLib);
+							}
 						}
 
 						// Populate and filter the mentions
@@ -107,12 +116,6 @@ module.exports = function (grunt) {
 							return array.indexOf(item) === index;
 						});
 						clientLibRef.mentions = newMentions;
-
-						if (file.indexOf('.css') > -1) {
-							clientLibRef.css.push(clientLib);
-						} else if (file.indexOf('.js') > -1) {
-							clientLibRef.js.push(clientLib);
-						}
 					}
 				});
 			}
