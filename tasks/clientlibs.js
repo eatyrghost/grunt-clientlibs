@@ -37,6 +37,7 @@ module.exports = function (grunt) {
 			},
 			config = {
 				clientLibPath: './clientlibs/',
+				compressCSS: true,
 				cssDependPrefix: '',
 				fullSuffix: '',
 				includes: {},
@@ -229,7 +230,11 @@ module.exports = function (grunt) {
 									clientLibObj.mentions.splice(mentionIndex, 1);
 								}
 							}
-							minClientLibCSS = uglifycss.processString(clientLibCSS, {});
+							if (config.compressCSS === true) {
+								minClientLibCSS = uglifycss.processString(clientLibCSS, {});
+							} else {
+								minClientLibCSS = clientLibCSS;
+							}
 
 							// Write the files
 							grunt.file.write(fullClientLibPath + '/styles.css', clientLibCSS, { encoding: 'utf8' });
