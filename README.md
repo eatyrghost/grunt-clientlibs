@@ -6,6 +6,7 @@ Reads `JSDoc`/`SASSDoc`-style `@depend` and `@clientlib` notations to generate A
 This module supports the following configurations:
 
 * `clientLibPath {string}`: Defaults to `'./clientlibs/'` - this is the path to create client library files in
+* `compressCSS {boolean}`: Defaults to `true` - set to false if CSS compression conflicts with AEM minification
 * `cssDependPrefix {string}`: Defaults to `''` - a prefix to use for `@depends` paths to keep CSS sources clean
 * `includes {object}`: A collection of non-editable sources to inject into your generated client libraries, see **Includes** section
 * `jsDependPrefix {string}`: Defaults to `''` - a prefix to use for `@depends` paths to keep JS sources clean
