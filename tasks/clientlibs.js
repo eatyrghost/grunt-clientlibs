@@ -161,6 +161,8 @@ module.exports = function (grunt) {
 			var clientLibNames = Object.keys(clientLibs),
 				clientLibCount = clientLibNames.length,
 				clientLibPath = config.clientLibPath,
+				clientLibIncludedFiles = [],
+				clientLibIncludesObj = null,
 				clientLibName = '',
 				clientLibObj = {},
 				clientLibCSS = '',
@@ -170,6 +172,7 @@ module.exports = function (grunt) {
 				dependsContent = '',
 				fullClientLibPath = '',
 				fullClientLibXML = '',
+				includesContent = '',
 				mentionIndex = -1,
 				minClientLibCSS = '',
 				minClientLibJS = '',
@@ -180,6 +183,7 @@ module.exports = function (grunt) {
 				clientLibCSS = '';
 				clientLibJS = '';
 				clientLibName = (clientLibNames[i] + '').trim();
+				clientLibIncludedFiles = [];
 				fullClientLibPath = clientLibPath + clientLibName + config.fullSuffix;
 				fullClientLibXML = clientLibXML.replace(/\$\$NAME\$\$/g, clientLibName + config.fullSuffix);
 				minClientLibPath = clientLibPath + clientLibName + config.minSuffix;
@@ -190,6 +194,7 @@ module.exports = function (grunt) {
 					continue;
 				} else {
 					clientLibObj = clientLibs[clientLibName];
+					clientLibIncludesObj = getIncludesObject(clientLibName);
 
 					// Do we have a valid client library object
 					if (spook.isValidObject(clientLibObj) === true) {
@@ -220,6 +225,7 @@ module.exports = function (grunt) {
 							// Generate and minify the string
 							for (var j = 0; j < clientLibCSSObj.length; j = j + 1) {
 								clientLibCSS += grunt.file.read(clientLibCSSObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
+								clientLibIncludedFiles.push(clientLibCSSObj[j].fileName);
 
 								// Remove mentions for found CSS files
 								mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSObj[j].fileName);
@@ -230,7 +236,7 @@ module.exports = function (grunt) {
 									clientLibObj.mentions.splice(mentionIndex, 1);
 								}
 							}
-							if (config.compressCSS === true) {
+							if (config.compressCSS === true && (clientLibIncludesObj === null || clientLibIncludesObj.compressCSS !== false)) {
 								minClientLibCSS = uglifycss.processString(clientLibCSS, {});
 							} else {
 								minClientLibCSS = clientLibCSS;
@@ -254,6 +260,7 @@ module.exports = function (grunt) {
 							// Generate and minify the string
 							for (var j = 0; j < clientLibJSObj.length; j = j + 1) {
 								clientLibJS += grunt.file.read(clientLibJSObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
+								clientLibIncludedFiles.push(clientLibJSObj[j].fileName);
 
 								// Remove mentions for found CSS files
 								mentionIndex = clientLibObj.mentions.indexOf(clientLibJSObj[j].fileName);
@@ -264,7 +271,11 @@ module.exports = function (grunt) {
 									clientLibObj.mentions.splice(mentionIndex, 1);
 								}
 							}
-							minClientLibJS = compressJS(clientLibJS);
+							if (clientLibIncludesObj !== null && clientLibIncludesObj.compressJS === false) {
+								minClientLibJS = clientLibJS;
+							} else {
+								minClientLibJS = compressJS(clientLibJS);
+							}
 
 							// Write the files
 							// @TODO Add a flag for preminified in production clientlibs
@@ -272,6 +283,28 @@ module.exports = function (grunt) {
 							grunt.file.write(fullClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
 							grunt.file.write(minClientLibPath + '/classes.js', minClientLibJS, { encoding: 'utf8' });
 							grunt.file.write(minClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
+						}
+
+						// Write out the list of files that were included
+						if (clientLibIncludedFiles.length > 0) {
+							includesContent = '';
+
+							// Add third party JS files
+							if (clientLibIncludesObj !== null && Array.isArray(clientLibIncludesObj.js) === true) {
+								includesContent += 'THIRD PARTY JS:\r\n';
+								includesContent += clientLibIncludesObj.js.join('\r\n');
+							}
+
+							// Add third party CSS files
+							if (clientLibIncludesObj !== null && Array.isArray(clientLibIncludesObj.css) === true) {
+								includesContent += 'THIRD PARTY CSS:\r\n';
+								includesContent += clientLibIncludesObj.css.join('\r\n');
+							}
+
+							includesContent += 'DIRECTLY INCLUDED:\r\n';
+							includesContent += clientLibIncludedFiles.join('\r\n');
+							grunt.file.write(fullClientLibPath + '/includes.txt', includesContent, { encoding: 'utf8' });
+							grunt.file.write(minClientLibPath + '/includes.txt', includesContent, { encoding: 'utf8' });
 						}
 
 						// Write out the list of dependencies that were mentioned but not included
@@ -283,6 +316,27 @@ module.exports = function (grunt) {
 					}
 				}
 			}
+		}
+
+		/**
+		 * @function getIncludesObject
+		 * @description Reads any includes of the given type for the client library
+		 * @param {string} clientLibName The name of the client library
+		 * @returns {object}
+		 */
+		function getIncludesObject(clientLibName) {
+			if (spook.validString(clientLibName) === '') {
+				return '';
+			}
+
+			var includeObj = config.includes[clientLibName],
+				returnValue = null;
+
+			if (spook.isValidObject(includeObj) === true) {
+				returnValue = includeObj;
+			}
+
+			return returnValue;
 		}
 
 		/**

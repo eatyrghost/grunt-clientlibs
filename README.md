@@ -180,6 +180,8 @@ Quite often, you will need to include third party sources in your client librari
 ```
 includes: {
 	'client-library-name': {
+		compressCSS: true,
+		compressJS: true,
 		js: [
 			'path-to-a-third-party-js-file.js',
 			'path-to-a-third-party-js-file.js',
@@ -195,5 +197,7 @@ includes: {
 ```
 
 For each client library you need to add files to, create a child object on the `includes` object with a `js` array, a `css` array, or both.
+
+You can also use this includes node to optionally turn off minification at a client library level. Ideal if you run into conflicts with the AEM YUI Compressor.
 
 You must order these includes in the order you expect them - they do not get the benefit of the dependency ordering logic as they cannot be notated. You will also need to be aware that these are included _before_ your sources and thus should not be dependent on them.
