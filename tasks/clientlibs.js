@@ -320,7 +320,7 @@ module.exports = function (grunt) {
 
 		/**
 		 * @function getIncludesObject
-		 * @description Reads any includes of the given type for the client library
+		 * @description Retrieves the includes object for a given client library
 		 * @param {string} clientLibName The name of the client library
 		 * @returns {object}
 		 */
