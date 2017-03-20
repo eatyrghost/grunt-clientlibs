@@ -160,11 +160,13 @@ module.exports = function (grunt) {
 		function createClientLibs () {
 			var clientLibNames = Object.keys(clientLibs),
 				clientLibCount = clientLibNames.length,
+				clientLibIncludes = '',
 				clientLibPath = config.clientLibPath,
 				clientLibName = '',
 				clientLibObj = {},
 				clientLibCSS = '',
 				clientLibCSSObj = {},
+				clientLibIncludeObj = null,
 				clientLibJS = '',
 				clientLibJSObj = {},
 				dependsContent = '',
@@ -178,6 +180,7 @@ module.exports = function (grunt) {
 
 			for (var i = 0; i < clientLibCount; i = i + 1) {
 				clientLibCSS = '';
+				clientLibIncludes = '',
 				clientLibJS = '';
 				clientLibName = (clientLibNames[i] + '').trim();
 				fullClientLibPath = clientLibPath + clientLibName + config.fullSuffix;
@@ -189,6 +192,7 @@ module.exports = function (grunt) {
 				if (clientLibName === '') {
 					continue;
 				} else {
+					clientLibIncludeObj = getIncludeObject(clientLibName);
 					clientLibObj = clientLibs[clientLibName];
 
 					// Do we have a valid client library object
@@ -206,13 +210,13 @@ module.exports = function (grunt) {
 						}
 
 						// We need XML
-						grunt.file.write(fullClientLibPath + '/.content.xml', fullClientLibXML, { encoding: 'utf8' });
-						grunt.file.write(minClientLibPath + '/.content.xml', minClientLibXML, { encoding: 'utf8' });
+						writeFile(fullClientLibPath + '/.content.xml', fullClientLibXML);
+						writeFile(minClientLibPath + '/.content.xml', minClientLibXML);
 
 						// Create the CSS
 						if (Array.isArray(clientLibCSSObj) && clientLibCSSObj.length > 0) {
 							// Retrieve any includes
-							clientLibCSS = getIncludesString(clientLibName, 'css');
+							clientLibCSS = getIncludeString(clientLibName, 'css');
 
 							// Sort the array into dependency order
 							clientLibCSSObj = performSort(clientLibCSSObj);
@@ -237,16 +241,16 @@ module.exports = function (grunt) {
 							}
 
 							// Write the files
-							grunt.file.write(fullClientLibPath + '/styles.css', clientLibCSS, { encoding: 'utf8' });
-							grunt.file.write(fullClientLibPath + '/css.txt', '#base=.\r\nstyles.css', { encoding: 'utf8' });
-							grunt.file.write(minClientLibPath + '/styles.css', minClientLibCSS, { encoding: 'utf8' });
-							grunt.file.write(minClientLibPath + '/css.txt', '#base=.\r\nstyles.css', { encoding: 'utf8' });
+							writeFile(fullClientLibPath + '/styles.css', clientLibCSS);
+							writeFile(fullClientLibPath + '/css.txt', '#base=.\r\nstyles.css');
+							writeFile(minClientLibPath + '/styles.css', minClientLibCSS);
+							writeFile(minClientLibPath + '/css.txt', '#base=.\r\nstyles.css');
 						}
 
 						// Create the JS
 						if (Array.isArray(clientLibJSObj) && clientLibJSObj.length > 0) {
 							// Retrieve any includes
-							clientLibJS = getIncludesString(clientLibName, 'js');
+							clientLibJS = getIncludeString(clientLibName, 'js');
 
 							// Sort the array into dependency order
 							clientLibJSObj = performSort(clientLibJSObj);
@@ -268,17 +272,37 @@ module.exports = function (grunt) {
 
 							// Write the files
 							// @TODO Add a flag for preminified in production clientlibs
-							grunt.file.write(fullClientLibPath + '/classes.js', clientLibJS, { encoding: 'utf8' });
-							grunt.file.write(fullClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
-							grunt.file.write(minClientLibPath + '/classes.js', minClientLibJS, { encoding: 'utf8' });
-							grunt.file.write(minClientLibPath + '/js.txt', '#base=.\r\nclasses.js', { encoding: 'utf8' });
+							writeFile(fullClientLibPath + '/classes.js', clientLibJS);
+							writeFile(fullClientLibPath + '/js.txt', '#base=.\r\nclasses.js');
+							writeFile(minClientLibPath + '/classes.js', minClientLibJS);
+							writeFile(minClientLibPath + '/js.txt', '#base=.\r\nclasses.js');
+						}
+
+						// Write out the list of files contained in the client library
+						if (clientLibIncludeObj !== null && Array.isArray(clientLibIncludeObj.css) === true) {
+							clientLibIncludes += 'External CSS:\r\n\r\n';
+							clientLibIncludes += clientLibIncludeObj.css.join('\r\n');
+							clientLibIncludes += '\r\n\r\n';
+						}
+						if (clientLibIncludeObj !== null && Array.isArray(clientLibIncludeObj.js) === true) {
+							clientLibIncludes += 'External JS:\r\n\r\n';
+							clientLibIncludes += clientLibIncludeObj.js.join('\r\n');
+							clientLibIncludes += '\r\n\r\n';
+						}
+						if (Array.isArray(clientLibObj.contains) === true) {
+							clientLibIncludes += 'Contained Files:\r\n\r\n';
+							clientLibIncludes += clientLibObj.contains.join('\r\n');
+						}
+						if (clientLibIncludes !== '') {
+							writeFile(fullClientLibPath + '/includes.txt', clientLibIncludes);
+							writeFile(minClientLibPath + '/includes.txt', clientLibIncludes);
 						}
 
 						// Write out the list of dependencies that were mentioned but not included
 						if (clientLibObj.mentions.length > 0) {
 							dependsContent = clientLibObj.mentions.join('\r\n');
-							grunt.file.write(fullClientLibPath + '/depends.txt', dependsContent, { encoding: 'utf8' });
-							grunt.file.write(minClientLibPath + '/depends.txt', dependsContent, { encoding: 'utf8' });
+							writeFile(fullClientLibPath + '/depends.txt', dependsContent);
+							writeFile(minClientLibPath + '/depends.txt', dependsContent);
 						}
 					}
 				}
@@ -286,18 +310,32 @@ module.exports = function (grunt) {
 		}
 
 		/**
-		 * @function getIncludesString
+		 * @function getIncludeObject
+		 * @description Reads any includes of the given type for the client library
+		 * @param {string} clientLibName The name of the client library
+		 * @returns {object}
+		 */
+		function getIncludeObject(clientLibName) {
+			if (spook.validString(clientLibName) === '') {
+				return null;
+			} else {
+				return spook.validObject(config.includes[clientLibName]);
+			}
+		}
+
+		/**
+		 * @function getIncludeString
 		 * @description Reads any includes of the given type for the client library
 		 * @param {string} clientLibName The name of the client library
 		 * @param {string} includeType The type of includes to retrieve
 		 * @returns {string}
 		 */
-		function getIncludesString(clientLibName, includeType) {
+		function getIncludeString(clientLibName, includeType) {
 			if (spook.validString(clientLibName) === '' || spook.validString(includeType) === '') {
 				return '';
 			}
 
-			var includeObj = config.includes[clientLibName],
+			var includeObj = getIncludeObject(clientLibName),
 				includeTypeObj = null,
 				includeFile = '',
 				includeFileContent = '',
@@ -387,6 +425,20 @@ module.exports = function (grunt) {
 				if (typeof sourceVal !== 'undefined' && (typeof targetVal === 'undefined' || typeof targetVal === typeof sourceVal)) {
 					target[propName] = sourceVal;
 				}
+			}
+		}
+
+		/**
+		 * @function writeFile
+		 * @description Attempts to write a file to the file system with common settings
+		 * @param {string} path The path to write the file to
+		 * @param {string} content The content for the file
+		 * @returns {void}
+		 */
+		function writeFile(path, content) {
+			try {
+				grunt.file.write(path, content, { encoding: 'utf8' });
+			} catch (e) {
 			}
 		}
 
