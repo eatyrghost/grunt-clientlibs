@@ -38,6 +38,7 @@ module.exports = function (grunt) {
 			config = {
 				clientLibPath: './clientlibs/',
 				compressCSS: true,
+				compressJS: true,
 				cssDependPrefix: '',
 				fullSuffix: '',
 				includes: {},
@@ -268,7 +269,13 @@ module.exports = function (grunt) {
 									clientLibObj.mentions.splice(mentionIndex, 1);
 								}
 							}
-							minClientLibJS = compressJS(clientLibJS);
+
+							if (config.compressJS === true) {
+								minClientLibJS = compressJS(clientLibJS);	
+							} else {
+								minClientLibJS = clientLibJS;	
+							}
+							
 
 							// Write the files
 							// @TODO Add a flag for preminified in production clientlibs
