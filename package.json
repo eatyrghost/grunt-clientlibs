@@ -1,32 +1,39 @@
 {
-	"name": "grunt-clientlibs",
-	"version": "1.1.7",
-	"description": "Generates client libraries automatically from JSDoc/SASSDoc notations in files.",
-	"keywords": ["aem", "adobe experience manager", "cq", "client library", "clientlibs", "packaging"],
-	"main": "tasks/clientlibs.js",
-	"repository": {
-		"url": "https://github.com/eatyrghost/grunt-clientlibs",
-		"type": "git"
-	},
-	"scripts": {},
-	"author": "eat yr Ghost <eatyrghost@gmail.com>",
-	"license": "ISC",
-	"dependencies": {
-		"async": "^2.1.4",
-		"path": "^0.12.7",
-		"recursive-readdir": "^2.1.0",
-		"spook-utils": "^1.0.0",
-		"uglifycss": "0.0.25",
-		"uglifyjs": "^2.4.10"
-	},
-	"devDependencies": {
-		"grunt-karma": "^2.0.0",
-		"jasmine-core": "^2.4.1",
-		"karma": "^1.2.0",
-		"karma-chrome-launcher": "^2.0.0",
-		"karma-coverage": "^1.1.1",
-		"karma-htmlfile-reporter": "^0.3.4",
-		"karma-jasmine": "^1.0.2",
-		"karma-phantomjs-launcher": "^1.0.1"
-	}
+  "name": "grunt-clientlibs",
+  "version": "1.1.8",
+  "description": "Generates client libraries automatically from JSDoc/SASSDoc notations in files.",
+  "keywords": [
+    "aem",
+    "adobe experience manager",
+    "cq",
+    "client library",
+    "clientlibs",
+    "packaging"
+  ],
+  "main": "tasks/clientlibs.js",
+  "repository": {
+    "url": "https://github.com/eatyrghost/grunt-clientlibs",
+    "type": "git"
+  },
+  "scripts": {},
+  "author": "eat yr Ghost <eatyrghost@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.1.4",
+    "path": "^0.12.7",
+    "recursive-readdir": "^2.1.0",
+    "spook-utils": "^1.0.0",
+    "uglify-js": "^3.0.7",
+    "uglifycss": "0.0.25"
+  },
+  "devDependencies": {
+    "grunt-karma": "^2.0.0",
+    "jasmine-core": "^2.4.1",
+    "karma": "^1.2.0",
+    "karma-chrome-launcher": "^2.0.0",
+    "karma-coverage": "^1.1.1",
+    "karma-htmlfile-reporter": "^0.3.4",
+    "karma-jasmine": "^1.0.2",
+    "karma-phantomjs-launcher": "^1.0.1"
+  }
 }
