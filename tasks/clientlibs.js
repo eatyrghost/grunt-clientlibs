@@ -5,7 +5,7 @@ var fs = require('fs'),
 	recursive = require('recursive-readdir'),
 	spook = require('spook-utils'),
 	uglifycss = require('uglifycss'),
-	uglifyjs = require('uglifyjs');
+	uglifyjs = require('uglify-js');
 
 // Declare the module
 module.exports = function (grunt) {
