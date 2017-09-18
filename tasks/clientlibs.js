@@ -487,9 +487,7 @@ module.exports = function (grunt) {
 			var returnValue = 0,
 				cleanFileA = removeSlashAndFileExtention(fileA.fileName),
 				cleanFileB = removeSlashAndFileExtention(fileB.fileName);
-
-			console.log("sortFn.fileA: " + cleanFileA);
-			console.log("sortFn.fileB: " + cleanFileB);
+				
 			if (fileB.depends.indexOf(cleanFileA) > -1) {
 				returnValue = -1;
 			} else if (fileA.depends.indexOf(cleanFileB) > -1) {
