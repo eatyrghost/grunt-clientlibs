@@ -167,9 +167,11 @@ module.exports = function (grunt) {
 				clientLibObj = {},
 				clientLibCSS = '',
 				clientLibCSSObj = {},
+				clientLibCSSOrderObj = {},
 				clientLibIncludeObj = null,
 				clientLibJS = '',
 				clientLibJSObj = {},
+				clientLibJSOrderObj = {},
 				dependsContent = '',
 				fullClientLibPath = '',
 				fullClientLibXML = '',
@@ -177,11 +179,13 @@ module.exports = function (grunt) {
 				minClientLibCSS = '',
 				minClientLibJS = '',
 				minClientLibPath = '',
-				minClientLibXML = '';
+				minClientLibXML = '',
+				clientLibIncludeOrderObjCSS = [],
+				clientLibIncludeOrderObjJS = [];
 
 			for (var i = 0; i < clientLibCount; i = i + 1) {
 				clientLibCSS = '';
-				clientLibIncludes = '',
+				clientLibIncludes = '';
 				clientLibJS = '';
 				clientLibName = (clientLibNames[i] + '').trim();
 				fullClientLibPath = clientLibPath + clientLibName + config.fullSuffix;
@@ -220,16 +224,17 @@ module.exports = function (grunt) {
 							clientLibCSS = getIncludeString(clientLibName, 'css');
 
 							// Sort the array into dependency order
-							clientLibCSSObj = performSort(clientLibCSSObj);
+							clientLibCSSOrderObj = performSort(clientLibCSSObj);						
 
 							// Generate and minify the string
-							for (var j = 0; j < clientLibCSSObj.length; j = j + 1) {
-								clientLibCSS += grunt.file.read(clientLibCSSObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
-
+							clientLibIncludeOrderObjCSS = [];
+							for (var j = 0; j < clientLibCSSOrderObj.length; j = j + 1) {
+								clientLibCSS += grunt.file.read(clientLibCSSOrderObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
+								clientLibIncludeOrderObjCSS.push(clientLibCSSOrderObj[j].fileName);
 								// Remove mentions for found CSS files
-								mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSObj[j].fileName);
+								mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSOrderObj[j].fileName);
 								if (mentionIndex === -1 && config.cssDependPrefix !== '') {
-									mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSObj[j].fileName.replace(config.cssDependPrefix, ''));
+									mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSOrderObj[j].fileName.replace(config.cssDependPrefix, ''));
 								}
 								if (mentionIndex > -1) {
 									clientLibObj.mentions.splice(mentionIndex, 1);
@@ -254,16 +259,18 @@ module.exports = function (grunt) {
 							clientLibJS = getIncludeString(clientLibName, 'js');
 
 							// Sort the array into dependency order
-							clientLibJSObj = performSort(clientLibJSObj);
+							clientLibJSOrderObj = performSort(clientLibJSObj);
 
 							// Generate and minify the string
-							for (var j = 0; j < clientLibJSObj.length; j = j + 1) {
-								clientLibJS += grunt.file.read(clientLibJSObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
+							clientLibIncludeOrderObjJS = [];
+							for (var j = 0; j < clientLibJSOrderObj.length; j = j + 1) {
+								clientLibJS += grunt.file.read(clientLibJSOrderObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
+								clientLibIncludeOrderObjJS.push(clientLibJSOrderObj[j].fileName);
 
 								// Remove mentions for found CSS files
-								mentionIndex = clientLibObj.mentions.indexOf(clientLibJSObj[j].fileName);
+								mentionIndex = clientLibObj.mentions.indexOf(clientLibJSOrderObj[j].fileName);
 								if (mentionIndex === -1 && config.jsDependPrefix !== '') {
-									mentionIndex = clientLibObj.mentions.indexOf(clientLibJSObj[j].fileName.replace(config.jsDependPrefix, ''));
+									mentionIndex = clientLibObj.mentions.indexOf(clientLibJSOrderObj[j].fileName.replace(config.jsDependPrefix, ''));
 								}
 								if (mentionIndex > -1) {
 									clientLibObj.mentions.splice(mentionIndex, 1);
@@ -296,9 +303,12 @@ module.exports = function (grunt) {
 							clientLibIncludes += clientLibIncludeObj.js.join('\r\n');
 							clientLibIncludes += '\r\n\r\n';
 						}
+						// use the correct order content for include.txt file.
 						if (Array.isArray(clientLibObj.contains) === true) {
 							clientLibIncludes += 'Contained Files:\r\n\r\n';
-							clientLibIncludes += clientLibObj.contains.join('\r\n');
+							clientLibIncludes += clientLibIncludeOrderObjCSS.join('\r\n');
+							clientLibIncludes += '\r\n\r\n';
+							clientLibIncludes += clientLibIncludeOrderObjJS.join('\r\n');
 						}
 						if (clientLibIncludes !== '') {
 							writeFile(fullClientLibPath + '/includes.txt', clientLibIncludes);
@@ -377,17 +387,95 @@ module.exports = function (grunt) {
 		 * @returns {object} The sorted array
 		 */
 		function performSort(arr) {
-			var returnValue = null,
-				arrLength = arr.length,
-				i = 0;
+			var arrLength = arr.length,
+				i = 0,
+				resultArray = [],
+				item = {};				
+				
+			for (i = 0; i < arrLength; i++) {
+				item = arr[i];
+				if (checkIfAlreadySortedForFile(item, resultArray) === false) {
+					sortSpecifiFile(item, arr, resultArray);
+				}				
+			}
+			
+			return resultArray;
+		}
+		/**
+		 * @function getDependFile
+		 * @description A helper method to check if have depends in this client libs
+		 * param {string} dependFileName
+		 * param {array} remainArray
+		 * returns {object} return null if there is no dependencies in this library, file return specific dependency file 
+		 */
+		function getDependFile(dependFileName, remainArray) {
+			var i = 0,
+				len = remainArray.length,
+				dependName = '',
+				specificFileName = '';				
 
-			for (i = 0; i < arrLength; i = i + 1) {
-				returnValue = arr.sort(sortFn);
+			for (i = 0; i < len; i++) {								
+				dependName = removeSlashAndFileExtention(dependFileName);
+				specificFileName = removeSlashAndFileExtention(remainArray[i].fileName);
+				if(dependName === specificFileName) {
+					return remainArray[i];
+				}
 			}
 
-			return returnValue;
+			return null;
 		}
+		/**
+		 * @functionsort SpecifiFile
+		 * @param  {object} fileObj     specifi file
+		 * @param  {array} remain array which is not sort out
+		 * @param  {array} resultArray sorted result array
+		 */
+		function sortSpecifiFile(fileObj, remainArray, resultArray) {
+			var depends = fileObj.depends,
+				i = 0,
+				len = depends.length,
+				filterResult = null;
+			
+			for (i = 0; i < len; i++) {
+				filterResult = getDependFile(depends[i], remainArray);
+				if(filterResult !== null) {
+					sortSpecifiFile(filterResult, remainArray, resultArray);
+				}
+			}
 
+			if(checkIfAlreadySortedForFile(fileObj, resultArray) === false) {
+				resultArray.push(fileObj);	
+			}
+		}
+		/**
+		 * @function checkIfAlreadySortedForFile
+		 * @param  {object} current   target file object
+		 * @param  {array} sortArray sorted result
+		 * @return {boolean}     true - if sorted, false -not
+		 */
+		function checkIfAlreadySortedForFile(current, sortArray) {
+			var i = 0,
+				len = sortArray.length,
+				currentFileName = removeSlashAndFileExtention(current.fileName),
+				sortSpecificFileName = '';
+
+			for (i = 0; i < len; i++) {
+				sortSpecificFileName = removeSlashAndFileExtention(sortArray[i].fileName);
+				if (currentFileName === sortSpecificFileName) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+		/**
+		 * @function removeSlashAndFileExtention
+		 * @param  {string} str target string
+		 * @return {string}  remove '/' and '.css' and '.js'
+		 */
+		function removeSlashAndFileExtention(str) {
+			return str.replace(/\//g, '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, '');
+		}
 		/**
 		 * @function sortFn
 		 * @description A helper function to sort two arrays of file objects
@@ -397,9 +485,11 @@ module.exports = function (grunt) {
 		 */
 		function sortFn(fileA, fileB) {
 			var returnValue = 0,
-				cleanFileA = fileA.fileName.replace('./', '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, ''),
-				cleanFileB = fileB.fileName.replace('./', '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, '');
+				cleanFileA = removeSlashAndFileExtention(fileA.fileName),
+				cleanFileB = removeSlashAndFileExtention(fileB.fileName);
 
+			console.log("sortFn.fileA: " + cleanFileA);
+			console.log("sortFn.fileB: " + cleanFileB);
 			if (fileB.depends.indexOf(cleanFileA) > -1) {
 				returnValue = -1;
 			} else if (fileA.depends.indexOf(cleanFileB) > -1) {
