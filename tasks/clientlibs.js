@@ -1,7 +1,6 @@
 /*global require:true, module:true, options:true */
 // Requires
 var fs = require('fs'),
-	path = require('path'),
 	recursive = require('recursive-readdir'),
 	spook = require('spook-utils'),
 	uglifycss = require('uglifycss'),
@@ -12,26 +11,30 @@ module.exports = function (grunt) {
 	'use strict';
 
 	grunt.registerMultiTask('clientlibs', 'Dynamically generate AEM client libraries', function () {
-		var clientLibs = {},
+		var CLIENT_LIB = '@clientlib',
+			DEPEND = '@depend',
+			DEPENDS = '@depends',
+			LINE_BREAK = '\r\n',
+			clientLibs = {},
 			clientLibXML = '<?xml version="1.0" encoding="UTF-8"?>\r\n<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"\r\njcr:primaryType="cq:ClientLibraryFolder"\r\njcr:title="$$NAME$$"\r\ncategories="[$$NAME$$]" />',
 			compressorConfig = {
-				sequences: true,
-				properties: false,
+				booleans: true,
+				cascade: true,
+				comparisons: true,
+				conditionals: true,
 				dead_code: true,
 				drop_debugger: true,
-				unsafe: false,
-				conditionals: true,
-				comparisons: true,
 				evaluate: true,
-				booleans: true,
-				loops: true,
-				unused: false,
 				hoist_funs: true,
 				hoist_vars: false,
 				if_return: true,
 				join_vars: true,
-				cascade: true,
+				loops: true,
+				properties: false,
+				sequences: true,
 				side_effects: true,
+				unsafe: false,
+				unused: false,
 				warnings: true,
 				global_defs: {}
 			},
@@ -56,14 +59,19 @@ module.exports = function (grunt) {
 		 * @returns {void}
 		 */
 		function addFile(file) {
+			var fileContent = '';
+
 			try {
-				var fileContent = grunt.file.read(file, { encoding: 'utf8' });
+				fileContent = grunt.file.read(file, {
+					encoding: 'utf8'
+				});
 				if (spook.validString(fileContent) === '') {
 					return;
 				}
 			} catch (e) {
 				return;
 			}
+
 			// Perform pattern matching
 			var clientLib = {
 					'depends': [],
@@ -81,7 +89,7 @@ module.exports = function (grunt) {
 			// Populate the object
 			if (dependIsArray === true) {
 				dependMatches.forEach(function (matchStr) {
-					var dependName = matchStr.replace('@depends', '').replace('@depend', '').trim();
+					var dependName = matchStr.replace(DEPENDS, '').replace(DEPEND, '').trim();
 					clientLib.depends.push(dependName);
 					mentions.push(dependName);
 				});
@@ -90,7 +98,7 @@ module.exports = function (grunt) {
 			// Add the object to the appropriate client libraries
 			if (clientLibIsArray === true) {
 				clientLibMatches.forEach(function (matchStr) {
-					var clientLibName = matchStr.replace('@clientlib', '').trim(),
+					var clientLibName = matchStr.replace(CLIENT_LIB, '').trim(),
 						clientLibRef = clientLibs[clientLibName];
 
 					if (clientLibName !== '') {
@@ -124,7 +132,6 @@ module.exports = function (grunt) {
 				});
 			}
 		}
-
 		/**
 		 * @function compressJS
 		 * @description Attempts to minify a string representing a JavaScript source
@@ -145,20 +152,18 @@ module.exports = function (grunt) {
 					compressor = uglifyjs.Compressor(compressorConfig);
 					tree = tree.transform(compressor);
 					returnValue = tree.print_to_string();
-				} catch (e) {
-				}
+				} catch (e) {}
 			}
 
 			// Return minified JS if possible
 			return returnValue;
 		}
-
 		/**
 		 * @function createClientLibs
 		 * @description Attempts to create client library files from an object collection
 		 * @returns {void}
 		 */
-		function createClientLibs () {
+		function createClientLibs() {
 			var clientLibNames = Object.keys(clientLibs),
 				clientLibCount = clientLibNames.length,
 				clientLibIncludes = '',
@@ -169,22 +174,24 @@ module.exports = function (grunt) {
 				clientLibCSSObj = {},
 				clientLibCSSOrderObj = {},
 				clientLibIncludeObj = null,
+				clientLibIncludeOrderObjCSS = [],
+				clientLibIncludeOrderObjJS = [],
 				clientLibJS = '',
 				clientLibJSObj = {},
 				clientLibJSOrderObj = {},
 				dependsContent = '',
 				fullClientLibPath = '',
 				fullClientLibXML = '',
+				i = 0,
+				j = 0,
 				mentionIndex = -1,
 				minClientLibCSS = '',
 				minClientLibJS = '',
 				minClientLibPath = '',
 				minClientLibXML = '',
-				clientLibIncludeOrderObjCSS = [],
-				clientLibIncludeOrderObjJS = [],
 				len = 0;
 
-			for (var i = 0; i < clientLibCount; i = i + 1) {
+			for (i = 0; i < clientLibCount; i++) {
 				clientLibCSS = '';
 				clientLibIncludes = '';
 				clientLibJS = '';
@@ -225,14 +232,18 @@ module.exports = function (grunt) {
 							clientLibCSS = getIncludeString(clientLibName, 'css');
 
 							// Sort the array into dependency order
-							clientLibCSSOrderObj = performSort(clientLibCSSObj);						
+							clientLibCSSOrderObj = performSort(clientLibCSSObj);
 
 							// Generate and minify the string
 							clientLibIncludeOrderObjCSS = [];
 							len = clientLibCSSOrderObj.length;
-							for (var j = 0; j < len; j = j + 1) {
-								clientLibCSS += grunt.file.read(clientLibCSSOrderObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
+
+							for (j = 0; j < len; j++) {
+								clientLibCSS += grunt.file.read(clientLibCSSOrderObj[j].fileName, {
+									encoding: 'utf8'
+								}) + LINE_BREAK;
 								clientLibIncludeOrderObjCSS.push(clientLibCSSOrderObj[j].fileName);
+
 								// Remove mentions for found CSS files
 								mentionIndex = clientLibObj.mentions.indexOf(clientLibCSSOrderObj[j].fileName);
 								if (mentionIndex === -1 && config.cssDependPrefix !== '') {
@@ -242,6 +253,7 @@ module.exports = function (grunt) {
 									clientLibObj.mentions.splice(mentionIndex, 1);
 								}
 							}
+
 							if (config.compressCSS === true) {
 								minClientLibCSS = uglifycss.processString(clientLibCSS, {});
 							} else {
@@ -250,9 +262,9 @@ module.exports = function (grunt) {
 
 							// Write the files
 							writeFile(fullClientLibPath + '/styles.css', clientLibCSS);
-							writeFile(fullClientLibPath + '/css.txt', '#base=.\r\nstyles.css');
+							writeFile(fullClientLibPath + '/css.txt', '#base=.' + LINE_BREAK + 'styles.css');
 							writeFile(minClientLibPath + '/styles.css', minClientLibCSS);
-							writeFile(minClientLibPath + '/css.txt', '#base=.\r\nstyles.css');
+							writeFile(minClientLibPath + '/css.txt', '#base=.' + LINE_BREAK + 'styles.css');
 						}
 
 						// Create the JS
@@ -266,8 +278,10 @@ module.exports = function (grunt) {
 							// Generate and minify the string
 							clientLibIncludeOrderObjJS = [];
 							len = clientLibJSOrderObj.length;
-							for (var j = 0; j < len; j = j + 1) {
-								clientLibJS += grunt.file.read(clientLibJSOrderObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
+							for (j = 0; j < len; j++) {
+								clientLibJS += grunt.file.read(clientLibJSOrderObj[j].fileName, {
+									encoding: 'utf8'
+								}) + LINE_BREAK;
 								clientLibIncludeOrderObjJS.push(clientLibJSOrderObj[j].fileName);
 
 								// Remove mentions for found CSS files
@@ -281,37 +295,44 @@ module.exports = function (grunt) {
 							}
 
 							if (config.compressJS === true) {
-								minClientLibJS = compressJS(clientLibJS);	
+								minClientLibJS = compressJS(clientLibJS);
 							} else {
-								minClientLibJS = clientLibJS;	
+								minClientLibJS = clientLibJS;
 							}
-							
 
 							// Write the files
 							// @TODO Add a flag for preminified in production clientlibs
 							writeFile(fullClientLibPath + '/classes.js', clientLibJS);
-							writeFile(fullClientLibPath + '/js.txt', '#base=.\r\nclasses.js');
+							writeFile(fullClientLibPath + '/js.txt', '#base=.' + LINE_BREAK + 'classes.js');
 							writeFile(minClientLibPath + '/classes.js', minClientLibJS);
-							writeFile(minClientLibPath + '/js.txt', '#base=.\r\nclasses.js');
+							writeFile(minClientLibPath + '/js.txt', '#base=.' + LINE_BREAK + 'classes.js');
 						}
 
 						// Write out the list of files contained in the client library
 						if (clientLibIncludeObj !== null && Array.isArray(clientLibIncludeObj.css) === true) {
-							clientLibIncludes += 'External CSS:\r\n\r\n';
-							clientLibIncludes += clientLibIncludeObj.css.join('\r\n');
-							clientLibIncludes += '\r\n\r\n';
+							clientLibIncludes += 'External CSS:';
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += clientLibIncludeObj.css.join(LINE_BREAK);
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += LINE_BREAK;
 						}
 						if (clientLibIncludeObj !== null && Array.isArray(clientLibIncludeObj.js) === true) {
-							clientLibIncludes += 'External JS:\r\n\r\n';
-							clientLibIncludes += clientLibIncludeObj.js.join('\r\n');
-							clientLibIncludes += '\r\n\r\n';
+							clientLibIncludes += 'External JS:';
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += clientLibIncludeObj.js.join(LINE_BREAK);
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += LINE_BREAK;
 						}
-						// use the correct order content for include.txt file.
 						if (Array.isArray(clientLibObj.contains) === true) {
-							clientLibIncludes += 'Contained Files:\r\n\r\n';
-							clientLibIncludes += clientLibIncludeOrderObjCSS.join('\r\n');
-							clientLibIncludes += '\r\n\r\n';
-							clientLibIncludes += clientLibIncludeOrderObjJS.join('\r\n');
+							clientLibIncludes += 'Contained Files:';
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += clientLibIncludeOrderObjCSS.join(LINE_BREAK);
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += LINE_BREAK;
+							clientLibIncludes += clientLibIncludeOrderObjJS.join(LINE_BREAK);
 						}
 						if (clientLibIncludes !== '') {
 							writeFile(fullClientLibPath + '/includes.txt', clientLibIncludes);
@@ -320,7 +341,7 @@ module.exports = function (grunt) {
 
 						// Write out the list of dependencies that were mentioned but not included
 						if (clientLibObj.mentions.length > 0) {
-							dependsContent = clientLibObj.mentions.join('\r\n');
+							dependsContent = clientLibObj.mentions.join(LINE_BREAK);
 							writeFile(fullClientLibPath + '/depends.txt', dependsContent);
 							writeFile(minClientLibPath + '/depends.txt', dependsContent);
 						}
@@ -328,7 +349,6 @@ module.exports = function (grunt) {
 				}
 			}
 		}
-
 		/**
 		 * @function getIncludeObject
 		 * @description Reads any includes of the given type for the client library
@@ -342,7 +362,6 @@ module.exports = function (grunt) {
 				return spook.validObject(config.includes[clientLibName]);
 			}
 		}
-
 		/**
 		 * @function getIncludeString
 		 * @description Reads any includes of the given type for the client library
@@ -371,9 +390,11 @@ module.exports = function (grunt) {
 				}
 			}
 
-			for (var i = 0; i < includeTypeObj.length; i = i + 1) {
+			for (var i = 0; i < includeTypeObj.length; i++) {
 				includeFile = includeTypeObj[i];
-				includeFileContent = grunt.file.read(includeFile, { encoding: 'utf8' });
+				includeFileContent = grunt.file.read(includeFile, {
+					encoding: 'utf8'
+				});
 
 				if (spook.validString(includeFileContent) !== '') {
 					returnValue += includeFileContent;
@@ -382,7 +403,6 @@ module.exports = function (grunt) {
 
 			return returnValue;
 		}
-
 		/**
 		 * @function performSort
 		 * @description Sorts an array as many times as it has members to ensure dependency order
@@ -393,34 +413,34 @@ module.exports = function (grunt) {
 			var arrLength = arr.length,
 				i = 0,
 				resultArray = [],
-				item = {};				
-				
-			for (i = 0; i < arrLength; i = i + 1) {
+				item = {};
+
+			for (i = 0; i < arrLength; i++) {
 				item = arr[i];
 				if (checkIfAlreadySortedForFile(item, resultArray) === false) {
-					sortSpecifiFile(item, arr, resultArray);
-				}				
+					sortFn(item, arr, resultArray);
+				}
 			}
-			
+
 			return resultArray;
 		}
 		/**
 		 * @function getDependFile
 		 * @description A helper method to check if have depends in this client libs
-		 * param {string} dependFileName
-		 * param {array} remainArray
-		 * returns {object} return null if there is no dependencies in this library, file return specific dependency file 
+		 * @param {string} dependFileName The name of the file
+		 * @param {array} remainArray The array of remaining dependencies
+		 * @returns {object} return null if there is no dependencies in this library, file return specific dependency file 
 		 */
 		function getDependFile(dependFileName, remainArray) {
 			var i = 0,
-				len = remainArray.length,
 				dependName = '',
-				specificFileName = '';				
+				remainArrayLength = remainArray.length,
+				specificFileName = '';
 
-			for (i = 0; i < len; i = i + 1) {								
-				dependName = removeSlashAndFileExtention(dependFileName);
-				specificFileName = removeSlashAndFileExtention(remainArray[i].fileName);
-				if(dependName === specificFileName) {
+			for (i = 0; i < remainArrayLength; i++) {
+				dependName = removeSlashAndFileExtension(dependFileName);
+				specificFileName = removeSlashAndFileExtension(remainArray[i].fileName);
+				if (dependName === specificFileName) {
 					return remainArray[i];
 				}
 			}
@@ -428,42 +448,45 @@ module.exports = function (grunt) {
 			return null;
 		}
 		/**
-		 * @functionsort SpecifiFile
-		 * @param  {object} fileObj     specifi file
-		 * @param  {array} remain array which is not sort out
-		 * @param  {array} resultArray sorted result array
+		 * @function sortFn
+		 * @param {object} fileObj The file to sort against
+		 * @param {array} remainArray The files that have not yet been sorted
+		 * @param {array} resultArray The files that have been sorted
+		 * @returns {void}
 		 */
-		function sortSpecifiFile(fileObj, remainArray, resultArray) {
+		function sortFn(fileObj, remainArray, resultArray) {
 			var depends = fileObj.depends,
 				i = 0,
 				len = depends.length,
 				filterResult = null;
-			
-			for (i = 0; i < len; i = i + 1) {
+
+			for (i = 0; i < len; i++) {
 				filterResult = getDependFile(depends[i], remainArray);
-				if(filterResult !== null) {
-					sortSpecifiFile(filterResult, remainArray, resultArray);
+
+				if (filterResult !== null) {
+					sortFn(filterResult, remainArray, resultArray);
 				}
 			}
 
-			if(checkIfAlreadySortedForFile(fileObj, resultArray) === false) {
-				resultArray.push(fileObj);	
+			if (checkIfAlreadySortedForFile(fileObj, resultArray) === false) {
+				resultArray.push(fileObj);
 			}
 		}
 		/**
 		 * @function checkIfAlreadySortedForFile
-		 * @param  {object} current   target file object
-		 * @param  {array} sortArray sorted result
-		 * @return {boolean}     true - if sorted, false -not
+		 * @param {object} current The target file object
+		 * @param {array} sortArray The sorted array to check
+		 * @return {boolean} Was it already sorted?
 		 */
 		function checkIfAlreadySortedForFile(current, sortArray) {
-			var i = 0,
-				len = sortArray.length,
-				currentFileName = removeSlashAndFileExtention(current.fileName),
+			var currentFileName = removeSlashAndFileExtension(current.fileName),
+				i = 0,
+				sortedArrayLength = sortArray.length,
 				sortSpecificFileName = '';
 
-			for (i = 0; i < len; i = i + 1) {
-				sortSpecificFileName = removeSlashAndFileExtention(sortArray[i].fileName);
+			for (i = 0; i < sortedArrayLength; i++) {
+				sortSpecificFileName = removeSlashAndFileExtension(sortArray[i].fileName);
+
 				if (currentFileName === sortSpecificFileName) {
 					return true;
 				}
@@ -472,34 +495,13 @@ module.exports = function (grunt) {
 			return false;
 		}
 		/**
-		 * @function removeSlashAndFileExtention
-		 * @param  {string} str target string
-		 * @return {string}  remove '/' and '.css' and '.js'
+		 * @function removeSlashAndFileExtension
+		 * @param {string} str The string to format
+		 * @return {string} The formatted string
 		 */
-		function removeSlashAndFileExtention(str) {
+		function removeSlashAndFileExtension(str) {
 			return str.replace(/\//g, '').replace(config.cssDependPrefix, '').replace(config.jsDependPrefix, '');
 		}
-		/**
-		 * @function sortFn
-		 * @description A helper function to sort two arrays of file objects
-		 * @param {object} fileA The left file, the item to prioritize
-		 * @param {object} fileB The right file, the item to compare against
-		 * @returns {number} A numerical representation of fileA's position relative to fileB
-		 */
-		function sortFn(fileA, fileB) {
-			var returnValue = 0,
-				cleanFileA = removeSlashAndFileExtention(fileA.fileName),
-				cleanFileB = removeSlashAndFileExtention(fileB.fileName);
-				
-			if (fileB.depends.indexOf(cleanFileA) > -1) {
-				returnValue = -1;
-			} else if (fileA.depends.indexOf(cleanFileB) > -1) {
-				returnValue = 1;
-			}
-
-			return returnValue;
-		}
-
 		/**
 		 * @function transferConfigs
 		 * @description Transfers configurations between two objects
@@ -515,7 +517,7 @@ module.exports = function (grunt) {
 				targetVal = null,
 				i = 0;
 
-			for (i = 0; i < propCount; i = i + 1) {
+			for (i = 0; i < propCount; i++) {
 				propName = props[i];
 				sourceVal = source[propName];
 				targetVal = target[propName];
@@ -525,7 +527,6 @@ module.exports = function (grunt) {
 				}
 			}
 		}
-
 		/**
 		 * @function writeFile
 		 * @description Attempts to write a file to the file system with common settings
@@ -535,14 +536,16 @@ module.exports = function (grunt) {
 		 */
 		function writeFile(path, content) {
 			try {
-				grunt.file.write(path, content, { encoding: 'utf8' });
-			} catch (e) {
-			}
+				grunt.file.write(path, content, {
+					encoding: 'utf8'
+				});
+			} catch (e) {}
 		}
 
 		// Configure this task
 		if (spook.isValidObject(options) === true) {
 			transferConfigs(options, config);
+
 			if (spook.isValidObject(options.minSettings) === true) {
 				transferConfigs(options.minSettings, compressorConfig);
 			}
@@ -553,12 +556,12 @@ module.exports = function (grunt) {
 			if (err) {
 				return;
 			}
+
 			if (files.length > 0) {
 				files.forEach(function (file, index, arr) {
 					try {
 						fs.unlinkSync(config.clientLibPath + file);
-					} catch (e) {
-					}
+					} catch (e) {}
 				});
 			}
 		});

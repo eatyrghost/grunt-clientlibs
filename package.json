@@ -1,6 +1,6 @@
 {
   "name": "grunt-clientlibs",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "Generates client libraries automatically from JSDoc/SASSDoc notations in files.",
   "keywords": [
     "aem",
