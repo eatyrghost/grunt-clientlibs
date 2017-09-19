@@ -181,7 +181,8 @@ module.exports = function (grunt) {
 				minClientLibPath = '',
 				minClientLibXML = '',
 				clientLibIncludeOrderObjCSS = [],
-				clientLibIncludeOrderObjJS = [];
+				clientLibIncludeOrderObjJS = [],
+				len = 0;
 
 			for (var i = 0; i < clientLibCount; i = i + 1) {
 				clientLibCSS = '';
@@ -228,7 +229,8 @@ module.exports = function (grunt) {
 
 							// Generate and minify the string
 							clientLibIncludeOrderObjCSS = [];
-							for (var j = 0; j < clientLibCSSOrderObj.length; j = j + 1) {
+							len = clientLibCSSOrderObj.length;
+							for (var j = 0; j < len; j = j + 1) {
 								clientLibCSS += grunt.file.read(clientLibCSSOrderObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
 								clientLibIncludeOrderObjCSS.push(clientLibCSSOrderObj[j].fileName);
 								// Remove mentions for found CSS files
@@ -263,7 +265,8 @@ module.exports = function (grunt) {
 
 							// Generate and minify the string
 							clientLibIncludeOrderObjJS = [];
-							for (var j = 0; j < clientLibJSOrderObj.length; j = j + 1) {
+							len = clientLibJSOrderObj.length;
+							for (var j = 0; j < len; j = j + 1) {
 								clientLibJS += grunt.file.read(clientLibJSOrderObj[j].fileName, { encoding: 'utf8' }) + '\r\n';
 								clientLibIncludeOrderObjJS.push(clientLibJSOrderObj[j].fileName);
 
@@ -392,7 +395,7 @@ module.exports = function (grunt) {
 				resultArray = [],
 				item = {};				
 				
-			for (i = 0; i < arrLength; i++) {
+			for (i = 0; i < arrLength; i = i + 1) {
 				item = arr[i];
 				if (checkIfAlreadySortedForFile(item, resultArray) === false) {
 					sortSpecifiFile(item, arr, resultArray);
@@ -414,7 +417,7 @@ module.exports = function (grunt) {
 				dependName = '',
 				specificFileName = '';				
 
-			for (i = 0; i < len; i++) {								
+			for (i = 0; i < len; i = i + 1) {								
 				dependName = removeSlashAndFileExtention(dependFileName);
 				specificFileName = removeSlashAndFileExtention(remainArray[i].fileName);
 				if(dependName === specificFileName) {
@@ -436,7 +439,7 @@ module.exports = function (grunt) {
 				len = depends.length,
 				filterResult = null;
 			
-			for (i = 0; i < len; i++) {
+			for (i = 0; i < len; i = i + 1) {
 				filterResult = getDependFile(depends[i], remainArray);
 				if(filterResult !== null) {
 					sortSpecifiFile(filterResult, remainArray, resultArray);
@@ -459,7 +462,7 @@ module.exports = function (grunt) {
 				currentFileName = removeSlashAndFileExtention(current.fileName),
 				sortSpecificFileName = '';
 
-			for (i = 0; i < len; i++) {
+			for (i = 0; i < len; i = i + 1) {
 				sortSpecificFileName = removeSlashAndFileExtention(sortArray[i].fileName);
 				if (currentFileName === sortSpecificFileName) {
 					return true;
