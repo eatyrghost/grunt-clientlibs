@@ -66,7 +66,7 @@ module.exports = function (grunt) {
 				fileContent = grunt.file.read(file, {
 					encoding: 'utf8'
 				});
-				if (valid.validString(fileContent) === '') {
+				if (!valid.isValidString(fileContent)) {
 					return;
 				}
 			} catch (e) {
