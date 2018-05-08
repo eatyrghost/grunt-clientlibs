@@ -1,10 +1,11 @@
 /*global require:true, module:true, options:true */
 // Requires
-var fs = require('fs'),
+const fs = require('fs'),
 	recursive = require('recursive-readdir'),
-	spook = require('spook-utils'),
+	smize = require('smize'),
 	uglifycss = require('uglifycss'),
-	uglifyjs = require('uglify-js');
+	uglifyjs = require('uglify-js'),
+	valid = smize.valid;
 
 // Declare the module
 module.exports = function (grunt) {
@@ -65,7 +66,7 @@ module.exports = function (grunt) {
 				fileContent = grunt.file.read(file, {
 					encoding: 'utf8'
 				});
-				if (spook.validString(fileContent) === '') {
+				if (valid.validString(fileContent) === '') {
 					return;
 				}
 			} catch (e) {
@@ -103,7 +104,7 @@ module.exports = function (grunt) {
 
 					if (clientLibName !== '') {
 						// Create the client library object if it doesn't exist
-						if (spook.validObject(clientLibRef) === null) {
+						if (!valid.isValidObject(clientLibRef)) {
 							clientLibs[clientLibName] = {
 								'contains': [],
 								'css': [],
@@ -144,7 +145,7 @@ module.exports = function (grunt) {
 				tree;
 
 			// Attempt to minify the source using `uglifyjs`
-			if (spook.validString(source) !== '') {
+			if (valid.isValidString(source)) {
 				// Attempt minification
 				try {
 					tree = uglifyjs.parse(source);
@@ -209,7 +210,7 @@ module.exports = function (grunt) {
 					clientLibObj = clientLibs[clientLibName];
 
 					// Do we have a valid client library object
-					if (spook.isValidObject(clientLibObj) === true) {
+					if (valid.isValidObject(clientLibObj)) {
 						// Set references to child objects
 						clientLibCSSObj = clientLibObj.css;
 						clientLibJSObj = clientLibObj.js;
@@ -356,10 +357,10 @@ module.exports = function (grunt) {
 		 * @returns {object}
 		 */
 		function getIncludeObject(clientLibName) {
-			if (spook.validString(clientLibName) === '') {
+			if (!valid.isValidString(clientLibName)) {
 				return null;
 			} else {
-				return spook.validObject(config.includes[clientLibName]);
+				return valid.validObject(config.includes[clientLibName]);
 			}
 		}
 		/**
@@ -370,7 +371,7 @@ module.exports = function (grunt) {
 		 * @returns {string}
 		 */
 		function getIncludeString(clientLibName, includeType) {
-			if (spook.validString(clientLibName) === '' || spook.validString(includeType) === '') {
+			if (!valid.isValidString(clientLibName) || !valid.isValidString(includeType)) {
 				return '';
 			}
 
@@ -380,12 +381,12 @@ module.exports = function (grunt) {
 				includeFileContent = '',
 				returnValue = '';
 
-			if (spook.isValidObject(includeObj) === false) {
+			if (!valid.isValidObject(includeObj)) {
 				return '';
 			} else {
 				includeTypeObj = includeObj[includeType];
 
-				if (spook.isValidObject(includeTypeObj) === false || Array.isArray(includeTypeObj) === false) {
+				if (!valid.isValidObject(includeTypeObj) || !Array.isArray(includeTypeObj)) {
 					return '';
 				}
 			}
@@ -396,7 +397,7 @@ module.exports = function (grunt) {
 					encoding: 'utf8'
 				});
 
-				if (spook.validString(includeFileContent) !== '') {
+				if (valid.isValidString(includeFileContent)) {
 					returnValue += includeFileContent;
 				}
 			}
@@ -429,7 +430,7 @@ module.exports = function (grunt) {
 		 * @description A helper method to check if have depends in this client libs
 		 * @param {string} dependFileName The name of the file
 		 * @param {array} remainArray The array of remaining dependencies
-		 * @returns {object} return null if there is no dependencies in this library, file return specific dependency file 
+		 * @returns {object} return null if there is no dependencies in this library, file return specific dependency file
 		 */
 		function getDependFile(dependFileName, remainArray) {
 			var i = 0,
@@ -543,10 +544,10 @@ module.exports = function (grunt) {
 		}
 
 		// Configure this task
-		if (spook.isValidObject(options) === true) {
+		if (valid.isValidObject(options)) {
 			transferConfigs(options, config);
 
-			if (spook.isValidObject(options.minSettings) === true) {
+			if (valid.isValidObject(options.minSettings)) {
 				transferConfigs(options.minSettings, compressorConfig);
 			}
 		}
